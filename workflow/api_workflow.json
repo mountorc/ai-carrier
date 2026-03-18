@@ -1,0 +1,102 @@
+{
+  "description": "工作流核心 API 配置文件 - 提供工作流执行、插件调用、文档管理等核心功能接口",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/api/proxy",
+      "handler": "ProxyHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "POST",
+      "path": "/workflow/api/flow/execute",
+      "handler": "ExecuteFlowHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/workflow/api/flow/list",
+      "handler": "GetFlowsHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/workflow/list",
+      "handler": "GetWorkflowListHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "POST",
+      "path": "/workflow/api/flow/execute-by-id",
+      "handler": "ExecuteFlowByIDHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/workflow/api/flow/execute-by-id/",
+      "handler": "ExecuteFlowByIDHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/workflow/execute/:uuid_autoFlow",
+      "handler": "ExecuteFlowByIDHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "POST",
+      "path": "/workflow/execute/:uuid_autoFlow",
+      "handler": "ExecuteFlowByIDHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/plugin/execute",
+      "handler": "PluginExecuteHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/plugin/list",
+      "handler": "PluginListHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/docs-public/list",
+      "handler": "DocsPublicListHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/docs-public/docs",
+      "handler": "DocsPublicGetHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/custom-nodes/config",
+      "handler": "CustomNodesConfigHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/workflow/api/execution-records",
+      "handler": "ExecutionRecordHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/workflow/api/autoset/:uuid_workflow",
+      "handler": "GetAutosetHandler",
+      "enableCORS": true
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "handler": "HomeHandler",
+      "enableCORS": false,
+      "isFunc": true
+    }
+  ]
+}

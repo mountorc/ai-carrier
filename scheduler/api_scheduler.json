@@ -1,0 +1,120 @@
+{
+  "description": "调度器 API 配置文件 - 提供工作流实例管理、节点管理、连接管理、执行管理等调度器核心接口",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/scheduler/instance/list",
+      "handler": "listInstances"
+    },
+    {
+      "method": "POST",
+      "path": "/scheduler/instance/create",
+      "handler": "createInstance"
+    },
+    {
+      "method": "GET",
+      "path": "/scheduler/instance/:uuid_instances",
+      "handler": "getInstance"
+    },
+    {
+      "method": "PUT",
+      "path": "/scheduler/instance/:uuid_instances",
+      "handler": "updateInstance"
+    },
+    {
+      "method": "DELETE",
+      "path": "/scheduler/instance/:uuid_instances",
+      "handler": "deleteInstance"
+    },
+    {
+      "method": "POST",
+      "path": "/scheduler/instance/:uuid_instances/start",
+      "handler": "startInstance"
+    },
+    {
+      "method": "POST",
+      "path": "/scheduler/instance/:uuid_instances/stop",
+      "handler": "stopInstance"
+    },
+    {
+      "method": "POST",
+      "path": "/scheduler/instance/:uuid_instances/restart",
+      "handler": "restartInstance"
+    },
+    {
+      "method": "GET",
+      "path": "/scheduler/instance/start",
+      "handler": "startSchedulerInstanceHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/scheduler/instance/next-nodes",
+      "handler": "getNextNodesHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/scheduler/instance/execute-next",
+      "handler": "executeNextNodeHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/scheduler/node/list/:instanceId",
+      "handler": "listNodes"
+    },
+    {
+      "method": "POST",
+      "path": "/scheduler/node/create",
+      "handler": "createNode"
+    },
+    {
+      "method": "PUT",
+      "path": "/scheduler/node/:id",
+      "handler": "updateNode"
+    },
+    {
+      "method": "PUT",
+      "path": "/scheduler/node/:id/status",
+      "handler": "updateNodeStatus"
+    },
+    {
+      "method": "DELETE",
+      "path": "/scheduler/node/:id",
+      "handler": "deleteNode"
+    },
+    {
+      "method": "GET",
+      "path": "/scheduler/connection/list/:instanceId",
+      "handler": "listConnections"
+    },
+    {
+      "method": "POST",
+      "path": "/scheduler/connection/create",
+      "handler": "createConnection"
+    },
+    {
+      "method": "PUT",
+      "path": "/scheduler/connection/:id",
+      "handler": "updateConnection"
+    },
+    {
+      "method": "DELETE",
+      "path": "/scheduler/connection/:id",
+      "handler": "deleteConnection"
+    },
+    {
+      "method": "GET",
+      "path": "/scheduler/execution/list",
+      "handler": "listExecutions"
+    },
+    {
+      "method": "GET",
+      "path": "/scheduler/execution/:id",
+      "handler": "getExecution"
+    },
+    {
+      "method": "POST",
+      "path": "/scheduler/sql/execute/:uuid",
+      "handler": "executeSQLByUUID"
+    }
+  ]
+}
