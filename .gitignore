@@ -39,3 +39,6 @@ logs/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Model files
+sdk/postgres-sdk/models/
