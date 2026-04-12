@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/trae/autoFlow/common/embedding"
 )
 
 type WhereSetConfig struct {
@@ -14,16 +16,22 @@ type WhereSetConfig struct {
 }
 
 type SQLConfigWithWhere struct {
-	Description string                 `json:"description"`
+	Description string                  `json:"description"`
 	SQLs        []SQLConfigEntryWithWhere `json:"sqls"`
 }
 
 type SQLConfigEntryWithWhere struct {
-	UUID      string              `json:"uuid"`
-	Name      string              `json:"name"`
-	Description string           `json:"description"`
-	SQL       string              `json:"sql"`
-	WhereSet  map[string]WhereSetConfig `json:"whereSet,omitempty"`
+	UUID        string                `json:"uuid"`
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	SQL         string                `json:"sql"`
+	WhereSet    map[string]WhereSetConfig `json:"whereSet,omitempty"`
+}
+
+var embeddingService *embedding.EmbeddingService
+
+func SetEmbeddingService(service *embedding.EmbeddingService) {
+	embeddingService = service
 }
 
 func GetSQL(uuid string, where map[string]interface{}) (string, error) {
@@ -131,7 +139,37 @@ func buildVectorClause(key string, value interface{}, config WhereSetConfig) (st
 		return "", fmt.Errorf("vector search value must be a string")
 	}
 
-	return fmt.Sprintf("%s <-> '%s' < 0.8", vectorField, escapeValue(valueStr)), nil
+	var embeddingVector []float32
+	var err error
+
+	if embeddingService != nil {
+		embeddingVector, err = embeddingService.GetEmbedding(valueStr)
+		if err != nil {
+			return "", fmt.Errorf("failed to get embedding: %v", err)
+		}
+	} else {
+		return "", fmt.Errorf("embedding service not initialized")
+	}
+
+	vectorStr := vectorToPostgresArray(embeddingVector)
+	return fmt.Sprintf("%s <-> %s < 0.8", vectorField, vectorStr), nil
+}
+
+func vectorToPostgresArray(vector []float32) string {
+	if len(vector) == 0 {
+		return "ARRAY[]::vector"
+	}
+	
+	var sb strings.Builder
+	sb.WriteString("ARRAY[")
+	for i, v := range vector {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(fmt.Sprintf("%f", v))
+	}
+	sb.WriteString("]::vector")
+	return sb.String()
 }
 
 func buildStringClause(key string, value interface{}) (string, error) {
