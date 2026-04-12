@@ -88,21 +88,18 @@ func LoadMountConfig(configPath string) (*MountConfig, error) {
 		pathsToTry = append(pathsToTry,
 			filepath.Join(exeDir, "mount_config.json"),
 			filepath.Join(exeDir, "../mount_config.json"),
+			filepath.Join(exeDir, "../../mount_config.json"),
 		)
 	}
 
-	cwd, err := os.Getwd()
-	if err == nil {
+	if _, err := os.Getwd(); err == nil {
 		pathsToTry = append(pathsToTry,
-			filepath.Join(cwd, "mount_config.json"),
-			filepath.Join(cwd, "carriercore/mount_config.json"),
+			"mount_config.json",
+			filepath.Join("carriercore", "mount_config.json"),
+			filepath.Join("..", "mount_config.json"),
+			filepath.Join("..", "carriercore", "mount_config.json"),
 		)
 	}
-
-	pathsToTry = append(pathsToTry,
-		"/Users/a1-6/Documents/code/trae/autoFlow/carriercore/mount_config.json",
-		"/Users/a1-6/Documents/code/trae/autoFlow/mount_config.json",
-	)
 
 	var lastErr error
 	for _, path := range pathsToTry {

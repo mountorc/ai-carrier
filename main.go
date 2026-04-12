@@ -10,7 +10,6 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,16 +24,6 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-
-	exePath, exeErr := os.Executable()
-	if exeErr == nil {
-		exeDir := filepath.Dir(exePath)
-		if chdirErr := os.Chdir(exeDir); chdirErr != nil {
-			log.Printf("Warning: failed to change working directory: %v", chdirErr)
-		} else {
-			log.Printf("Working directory set to: %s", exeDir)
-		}
-	}
 
 	log.Println("Initializing MountCore Service...")
 
