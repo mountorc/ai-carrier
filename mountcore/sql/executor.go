@@ -381,13 +381,28 @@ func (e *Executor) GetSQLByUUID(uuid string) (*SQLConfigEntry, error) {
 }
 
 func (e *Executor) ExecuteSQLByUUID(ctx context.Context, uuid string, args []interface{}) (*QueryResult, error) {
-	entry, err := e.GetSQLByUUID(uuid)
+	sqlStmt, err := GetSQL(uuid, nil)
+	if err != nil {
+		log.Printf("Warning: failed to get SQL from ability config: %v", err)
+		entry, err := e.GetSQLByUUID(uuid)
+		if err != nil {
+			return nil, err
+		}
+		sqlStmt = entry.SQL
+	}
+
+	log.Printf("Executing SQL: %s (%s)", uuid, sqlStmt)
+	return e.Query(ctx, sqlStmt, args...)
+}
+
+func (e *Executor) ExecuteSQLByUUIDWithWhere(ctx context.Context, uuid string, where map[string]interface{}, args []interface{}) (*QueryResult, error) {
+	sqlStmt, err := GetSQL(uuid, where)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("Executing SQL: %s (%s)", entry.Name, uuid)
-	return e.Query(ctx, entry.SQL, args...)
+	log.Printf("Executing SQL with where: %s (%s)", uuid, sqlStmt)
+	return e.Query(ctx, sqlStmt, args...)
 }
 
 func (e *Executor) ListRegisteredSQL() []SQLConfigEntry {
@@ -417,4 +432,11 @@ func ExecuteSQLByUUID(ctx context.Context, uuid string, args []interface{}) (*Qu
 		return nil, fmt.Errorf("executor not initialized")
 	}
 	return instance.ExecuteSQLByUUID(ctx, uuid, args)
+}
+
+func ExecuteSQLByUUIDWithWhere(ctx context.Context, uuid string, where map[string]interface{}, args []interface{}) (*QueryResult, error) {
+	if instance == nil {
+		return nil, fmt.Errorf("executor not initialized")
+	}
+	return instance.ExecuteSQLByUUIDWithWhere(ctx, uuid, where, args)
 }
