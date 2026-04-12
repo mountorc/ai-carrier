@@ -1818,9 +1818,57 @@ func getAgentListHandler(c *gin.Context) {
 func getSkillListHandler(c *gin.Context) {
 	log.Println("Getting skill list from database...")
 
-	result, err := GetSkillList()
+	rows, err := pgDB.Query(`SELECT uuid, name, nick, description, download, created_at, updated_at FROM skill_store_skills ORDER BY created_at DESC`)
 	if err != nil {
-		log.Printf("Error getting skill list: %v", err)
+		log.Printf("Error querying skill list: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to get skills: %v", err),
+		})
+		return
+	}
+	defer rows.Close()
+
+	var skills []map[string]interface{}
+	for rows.Next() {
+		var (
+			uuid        string
+			name        string
+			nick        string
+			description string
+			download    string
+			createdAt   *time.Time
+			updatedAt   *time.Time
+		)
+		err := rows.Scan(&uuid, &name, &nick, &description, &download, &createdAt, &updatedAt)
+		if err != nil {
+			log.Printf("Error scanning skill row: %v", err)
+			continue
+		}
+
+		skill := map[string]interface{}{
+			"uuid":        uuid,
+			"name":        name,
+			"nick":        nick,
+			"description": description,
+			"created_at":  createdAt,
+			"updated_at":  updatedAt,
+		}
+
+		if download != "" {
+			var downloadData map[string]interface{}
+			if err := json.Unmarshal([]byte(download), &downloadData); err == nil {
+				skill["download"] = downloadData
+			} else {
+				skill["download"] = download
+			}
+		}
+
+		skills = append(skills, skill)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("Error iterating skill rows: %v", err)
 		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,
 			Message: fmt.Sprintf("Failed to get skills: %v", err),
@@ -1830,8 +1878,8 @@ func getSkillListHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, Response{
 		Success: true,
-		Message: fmt.Sprintf("Found %d skills", result.Count),
-		Data:    result.Rows,
+		Message: fmt.Sprintf("Found %d skills", len(skills)),
+		Data:    skills,
 	})
 }
 
