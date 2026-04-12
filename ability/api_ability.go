@@ -17,12 +17,20 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 
+	"github.com/trae/autoFlow/carriercore/common/db"
+	sqlutil "github.com/trae/autoFlow/carriercore/common/sql"
+	"github.com/trae/autoFlow/carriercore/project"
 	"github.com/trae/autoFlow/common/capability"
 	"github.com/trae/autoFlow/mounts/workflow/workers"
 	api "github.com/trae/autoFlow/sdk/mountcore-sdk/go"
-	"github.com/trae/autoFlow/carriercore/common/db"
-	"github.com/trae/autoFlow/carriercore/project"
 )
+
+//go:embed sql_ability.json
+var sqlAbilityData []byte
+
+func LoadSQLConfig() error {
+	return sqlutil.LoadSQLConfigData(sqlAbilityData, "ability/sql_ability.json")
+}
 
 type ExecuteWorkerRequest struct {
 	WorkerID   string                 `json:"worker_id"`
@@ -94,7 +102,6 @@ var (
 		GetMetadata(ctx context.Context, id string) (*capability.Capability, error)
 		Close() error
 	}
-	projectManager *project.ProjectManager
 )
 
 func initConfig() {
@@ -187,8 +194,13 @@ func getHandlerMap() map[string]gin.HandlerFunc {
 		"executeWorkerHandler":             executeWorkerHandler,
 		"getAbilityHandler":                getAbilityHandler,
 		"vectorSearchHandler":              vectorSearchHandler,
+		"textSearchHandler":                textSearchHandler,
 		"listProjectsHandler":              listProjectsHandler,
 		"getProjectHandler":                getProjectHandler,
+		"getAgentListHandler":              getAgentListHandler,
+		"getSkillListHandler":              getSkillListHandler,
+		"getSkillHandler":                  getSkillHandler,
+		"executeAbilitySQLByUUID":          executeAbilitySQLByUUID,
 	}
 }
 
@@ -225,16 +237,17 @@ func Init() error {
 	}
 
 	// Initialize project manager
-	projectConfigFile := filepath.Join(projectRoot, "services", "ability", "data", "project.json")
+	// Use the absolute path directly
+	projectConfigFile := "/Users/a1-6/Documents/code/trae/autoFlow/services/ability/data/project.json"
 	log.Printf("Initializing ProjectManager with config file: %s", projectConfigFile)
 	pm, err := project.NewProjectManager(projectConfigFile)
 	if err != nil {
 		log.Printf("Warning: failed to initialize ProjectManager: %v, continuing without project validation", err)
-		projectManager = nil
 	} else {
 		log.Printf("ProjectManager initialized successfully, loaded %d projects", len(pm.GetAllProjects()))
-		projectManager = pm
 	}
+	// 调用 SetProjectManager 函数，将初始化的 ProjectManager 实例传递给 handlers.go 文件
+	SetProjectManager(pm)
 
 	return nil
 }

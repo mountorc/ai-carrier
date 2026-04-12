@@ -812,8 +812,9 @@ func ExecuteFlowByIDHandler(w http.ResponseWriter, r *http.Request) {
 	// 注册流程
 	engine.RegisterFlow(flowDef)
 
-	// 执行流程
-	ctx := context.Background()
+	// 执行流程 - 设置 5 分钟超时
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 	initialContext := &workflow.Context{
 		Data: make(map[string]interface{}),
 	}

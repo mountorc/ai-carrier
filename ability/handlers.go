@@ -19,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/trae/autoFlow/carriercore/project"
 	"github.com/trae/autoFlow/common/capability"
 	"github.com/trae/autoFlow/common/embedding"
 	"github.com/trae/autoFlow/mounts/workflow/workers"
@@ -27,12 +28,80 @@ import (
 var (
 	// embeddingService 全局嵌入服务实例
 	embeddingService *embedding.EmbeddingService
+	// ProjectManager 全局项目管理器实例
+	ProjectManager *project.ProjectManager
 )
 
 // SetEmbeddingService 设置嵌入服务实例
 func SetEmbeddingService(service *embedding.EmbeddingService) {
 	embeddingService = service
 	log.Println("Embedding service set successfully in ability module")
+}
+
+// SetProjectManager 设置项目管理器实例
+func SetProjectManager(pm *project.ProjectManager) {
+	ProjectManager = pm
+	log.Println("Project manager set successfully in ability module")
+}
+
+func listProjectsHandler(c *gin.Context) {
+	if ProjectManager == nil {
+		c.JSON(http.StatusOK, Response{
+			Success: true,
+			Message: "Project manager not initialized",
+			Data:    []interface{}{},
+		})
+		return
+	}
+
+	projects := ProjectManager.GetAllProjects()
+	// 转换为 []interface{} 类型
+	var data []interface{}
+	for _, project := range projects {
+		data = append(data, project)
+	}
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Projects retrieved successfully",
+		Data:    data,
+	})
+}
+
+func getProjectHandler(c *gin.Context) {
+	if ProjectManager == nil {
+		c.JSON(http.StatusOK, Response{
+			Success: true,
+			Message: "Project manager not initialized",
+			Data:    nil,
+		})
+		return
+	}
+
+	uuidProject := c.Query("uuid_project")
+	if uuidProject == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "Missing required parameter: uuid_project",
+		})
+		return
+	}
+
+	// 使用 ValidateUUIDProject 方法，传递空字符串作为 project 参数
+	// 由于我们只需要通过 UUID 查找项目，不需要验证 project 名称
+	project, err := ProjectManager.ValidateUUIDProject(uuidProject, "")
+	if err != nil {
+		c.JSON(http.StatusNotFound, Response{
+			Success: false,
+			Message: fmt.Sprintf("Project not found: %v", err),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Project retrieved successfully",
+		Data:    project,
+	})
 }
 
 type RegisterRequest struct {
@@ -862,9 +931,9 @@ func workerRegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// 如果projectManager已初始化，则验证项目；否则跳过验证（向后兼容）
-	if projectManager != nil {
-		if _, err := projectManager.ValidateUUIDProject(req.UUIDProject, req.Project); err != nil {
+	// 如果ProjectManager已初始化，则验证项目；否则跳过验证（向后兼容）
+	if ProjectManager != nil {
+		if _, err := ProjectManager.ValidateUUIDProject(req.UUIDProject, req.Project); err != nil {
 			log.Printf("Warning: project validation failed, but continuing with registration: %v", err)
 		}
 	}
@@ -1713,58 +1782,116 @@ func updateProxyWorkerHandler(c *gin.Context) {
 	})
 }
 
-func listProjectsHandler(c *gin.Context) {
-	if projectManager == nil {
-		c.JSON(http.StatusOK, Response{
-			Success: true,
-			Message: "Project manager not initialized",
-			Data:    []interface{}{},
+func getAgentListHandler(c *gin.Context) {
+	// 直接使用绝对路径读取agent_list.json文件
+	agentListPath := "/Users/a1-6/Documents/code/trae/autoFlow/carriercore/data/agent_list.json"
+	log.Printf("Reading agent list from: %s", agentListPath)
+
+	data, err := os.ReadFile(agentListPath)
+	if err != nil {
+		log.Printf("Error reading agent_list.json: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: "Failed to read agent list",
 		})
 		return
 	}
 
-	projects := projectManager.GetAllProjects()
+	// 解析JSON数据
+	var agentList []interface{}
+	if err := json.Unmarshal(data, &agentList); err != nil {
+		log.Printf("Error parsing agent_list.json: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: "Failed to parse agent list",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, Response{
 		Success: true,
-		Message: "Projects retrieved successfully",
-		Data:    projects,
+		Message: "Agent list retrieved successfully",
+		Data:    agentList,
 	})
 }
 
-func getProjectHandler(c *gin.Context) {
-	if projectManager == nil {
-		c.JSON(http.StatusOK, Response{
-			Success: true,
-			Message: "Project manager not initialized",
-			Data:    nil,
-		})
-		return
-	}
+func getSkillListHandler(c *gin.Context) {
+	log.Println("Getting skill list from database...")
 
-	uuidProject := c.Query("uuid_project")
-	if uuidProject == "" {
-		c.JSON(http.StatusBadRequest, Response{
-			Success: false,
-			Message: "Missing required parameter: uuid_project",
-		})
-		return
-	}
-
-	// 使用 ValidateUUIDProject 方法，传递空字符串作为 project 参数
-	// 由于我们只需要通过 UUID 查找项目，不需要验证 project 名称
-	project, err := projectManager.ValidateUUIDProject(uuidProject, "")
+	result, err := GetSkillList()
 	if err != nil {
-		c.JSON(http.StatusNotFound, Response{
+		log.Printf("Error getting skill list: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,
-			Message: fmt.Sprintf("Project not found: %v", err),
+			Message: fmt.Sprintf("Failed to get skills: %v", err),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, Response{
 		Success: true,
-		Message: "Project retrieved successfully",
-		Data:    project,
+		Message: fmt.Sprintf("Found %d skills", result.Count),
+		Data:    result.Rows,
+	})
+}
+
+func getSkillHandler(c *gin.Context) {
+	skillUUID := c.Query("uuid")
+	if skillUUID == "" {
+		skillUUID = c.Query("id")
+		if skillUUID == "" {
+			c.JSON(http.StatusBadRequest, Response{
+				Success: false,
+				Message: "Missing required parameter: uuid or id",
+			})
+			return
+		}
+	}
+
+	log.Printf("Getting skill with UUID: %s", skillUUID)
+
+	var (
+		uuid        string
+		name        string
+		nick        string
+		description string
+		createdAt   time.Time
+		updatedAt   time.Time
+	)
+
+	err := pgDB.QueryRow(`SELECT uuid, name, nick, description, created_at, updated_at FROM skill_store_skills WHERE uuid = $1`, skillUUID).
+		Scan(&uuid, &name, &nick, &description, &createdAt, &updatedAt)
+
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, Response{
+			Success: false,
+			Message: fmt.Sprintf("Skill with UUID %s not found", skillUUID),
+		})
+		return
+	}
+
+	if err != nil {
+		log.Printf("Error querying skill: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to get skill: %v", err),
+		})
+		return
+	}
+
+	skill := map[string]interface{}{
+		"uuid":        uuid,
+		"name":        name,
+		"nick":        nick,
+		"description": description,
+		"created_at":  createdAt,
+		"updated_at":  updatedAt,
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Skill retrieved successfully",
+		Data:    skill,
 	})
 }
 
@@ -2345,6 +2472,94 @@ func vectorSearchHandler(c *gin.Context) {
 		Data:    items,
 	})
 	log.Printf("向量搜索完成: 返回 %d 个结果", len(items))
+}
+
+// textSearchHandler 文本搜索能力
+func textSearchHandler(c *gin.Context) {
+	text := c.Query("text")
+	if text == "" {
+		c.JSON(http.StatusBadRequest, AbilityVectorSearchResponse{
+			Success: false,
+			Message: "text参数不能为空",
+		})
+		return
+	}
+
+	limitStr := c.Query("limit")
+	limit := 10
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	project := c.Query("project")
+
+	log.Printf("文本搜索请求: text=%s, limit=%d, project=%s", text, limit, project)
+
+	// 构建SQL查询 - 使用LIKE进行文本匹配
+	var sql string
+	var args []interface{}
+
+	searchPattern := "%" + text + "%"
+
+	if project != "" {
+		sql = `
+			SELECT id, project, name, description, embedding
+			FROM ability_template
+			WHERE project = $1 AND is_enabled = true AND (name LIKE $2 OR description LIKE $2)
+			LIMIT $3
+		`
+		args = append(args, project, searchPattern, limit)
+	} else {
+		sql = `
+			SELECT id, project, name, description, embedding
+			FROM ability_template
+			WHERE is_enabled = true AND (name LIKE $1 OR description LIKE $1)
+			LIMIT $2
+		`
+		args = append(args, searchPattern, limit)
+	}
+
+	// 执行SQL查询
+	rows, err := pgDB.Query(sql, args...)
+	if err != nil {
+		log.Printf("数据库查询失败: %v", err)
+		c.JSON(http.StatusInternalServerError, AbilityVectorSearchResponse{
+			Success: false,
+			Message: fmt.Sprintf("数据库查询失败: %v", err),
+		})
+		return
+	}
+	defer rows.Close()
+
+	var items []AbilityVectorSearchItem
+
+	for rows.Next() {
+		var id, project, name, description string
+		var embedding []byte
+
+		err := rows.Scan(&id, &project, &name, &description, &embedding)
+		if err != nil {
+			log.Printf("Error scanning row: %v", err)
+			continue
+		}
+
+		items = append(items, AbilityVectorSearchItem{
+			ID:          id,
+			Project:     project,
+			Name:        name,
+			Description: description,
+			Distance:    0,
+		})
+	}
+
+	c.JSON(http.StatusOK, AbilityVectorSearchResponse{
+		Success: true,
+		Message: fmt.Sprintf("找到 %d 个结果", len(items)),
+		Data:    items,
+	})
+	log.Printf("文本搜索完成: 返回 %d 个结果", len(items))
 }
 
 // calculateDistance 计算两个向量之间的欧几里得距离

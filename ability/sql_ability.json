@@ -1,0 +1,41 @@
+{
+  "description": "能力中心 SQL 配置文件 - 包含所有能力模块使用的 SQL 语句",
+  "sqls": [
+    {
+      "uuid": "330e8400-e22b-41d4-a716-446655440001",
+      "name": "listSkills",
+      "description": "获取技能列表，按创建时间倒序排列",
+      "sql": "SELECT uuid, name, nick, description,download, created_at, updated_at FROM skill_store_skills ORDER BY created_at DESC"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440002",
+      "name": "getSkill",
+      "description": "根据UUID获取单个技能详情",
+      "sql": "SELECT uuid, name, nick, description,download, created_at, updated_at FROM skill_store_skills WHERE uuid = $1"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440003",
+      "name": "searchSkillsByName",
+      "description": "根据名称搜索技能",
+      "sql": "SELECT uuid, name, nick, description,download, created_at, updated_at FROM skill_store_skills WHERE name LIKE $1 ORDER BY created_at DESC"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440004",
+      "name": "searchSkillsByNick",
+      "description": "根据昵称搜索技能",
+      "sql": "SELECT uuid, name, nick, description,download, created_at, updated_at FROM skill_store_skills WHERE nick LIKE $1 ORDER BY created_at DESC"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440005",
+      "name": "countSkills",
+      "description": "获取技能总数",
+      "sql": "SELECT COUNT(*) FROM skill_store_skills"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440006",
+      "name": "listSkillsByKeyword",
+      "description": "根据关键字搜索技能（名称、昵称、描述）",
+      "sql": "SELECT uuid, name, nick, description,download, created_at, updated_at FROM skill_store_skills WHERE name LIKE $1 OR nick LIKE $1 OR description LIKE $1 ORDER BY created_at DESC"
+    }
+  ]
+}

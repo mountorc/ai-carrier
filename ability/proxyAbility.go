@@ -12,14 +12,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/trae/autoFlow/carriercore/workflow"
 	"github.com/trae/autoFlow/common/capability"
 	"github.com/trae/autoFlow/mounts/workflow/workers"
-	"github.com/trae/autoFlow/carriercore/workflow"
 )
 
 // ProxyAbilityRegisterRequest 定义添加代理能力的请求结构
 type ProxyAbilityRegisterRequest struct {
 	ID           string                   `json:"id"`
+	WorkerNick   string                   `json:"workerNick"`
 	Name         string                   `json:"name"`
 	Type         string                   `json:"type"`
 	Language     string                   `json:"language"`
@@ -55,6 +56,12 @@ func addProxyAbilityHandler(c *gin.Context) {
 
 	// 注册到 worker 注册中心和能力中心（如果启用）
 	if req.Enabled {
+		// 使用 WorkerNick 作为 worker 昵称，如果没有提供则使用 ID
+		workerNick := req.WorkerNick
+		if workerNick == "" {
+			workerNick = req.ID
+		}
+
 		options := workers.DefaultWorkerOptions()
 		options.Description = req.Description
 		options.ApiAddress = req.ApiAddress
@@ -64,9 +71,9 @@ func addProxyAbilityHandler(c *gin.Context) {
 			project = "proxyWorkers"
 		}
 		options.Project = project
-		options.WorkerNick = req.ID
+		options.WorkerNick = workerNick
 
-		if err := workers.RegisterWorkerWithOptions(req.ID, req.Name, req.Type, options); err != nil {
+		if err := workers.RegisterWorkerWithOptions(workerNick, req.Name, req.Type, options); err != nil {
 			c.JSON(http.StatusInternalServerError, Response{
 				Success: false,
 				Message: fmt.Sprintf("Failed to register proxy ability to worker registry: %v", err),
@@ -87,7 +94,7 @@ func addProxyAbilityHandler(c *gin.Context) {
 		if project == "" {
 			project = "proxyWorkers"
 		}
-		abilityID := fmt.Sprintf("%s.%s@%s", project, req.ID, version)
+		abilityID := fmt.Sprintf("%s.%s@%s", project, workerNick, version)
 
 		cap := &capability.Capability{
 			ID:               abilityID,
@@ -108,7 +115,7 @@ func addProxyAbilityHandler(c *gin.Context) {
 				"api_address": req.ApiAddress,
 				"project":     project,
 				"uuidProject": req.UUIDProject,
-				"workerNick":  req.ID,
+				"workerNick":  workerNick,
 			},
 			Tags:         []string{"workflow", "worker", req.Type},
 			Owner:        req.Owner,
@@ -757,7 +764,8 @@ func getProxyAbilityListHandler(c *gin.Context) {
 	var proxyAbilities []map[string]interface{}
 
 	for rows.Next() {
-		var id, name, workerType, description, apiAddress, project, uuidProject string
+		var id, name, workerType string
+		var description, apiAddress, project, uuidProject sql.NullString
 		var enabled bool
 		var lastRegistered, createdAt, updatedAt time.Time
 		var paramConfigsJSON []byte
@@ -775,16 +783,37 @@ func getProxyAbilityListHandler(c *gin.Context) {
 			}
 		}
 
+		// 处理NULL值
+		descriptionStr := ""
+		if description.Valid {
+			descriptionStr = description.String
+		}
+
+		apiAddressStr := ""
+		if apiAddress.Valid {
+			apiAddressStr = apiAddress.String
+		}
+
+		projectStr := ""
+		if project.Valid {
+			projectStr = project.String
+		}
+
+		uuidProjectStr := ""
+		if uuidProject.Valid {
+			uuidProjectStr = uuidProject.String
+		}
+
 		proxyAbility := map[string]interface{}{
 			"ID":          id,
 			"Name":        name,
 			"WorkerType":  workerType,
 			"Enabled":     enabled,
-			"Project":     project,
-			"UUIDProject": uuidProject,
+			"Project":     projectStr,
+			"UUIDProject": uuidProjectStr,
 			"Options": map[string]interface{}{
-				"Description":  description,
-				"ApiAddress":   apiAddress,
+				"Description":  descriptionStr,
+				"ApiAddress":   apiAddressStr,
 				"ParamConfigs": paramConfigs,
 			},
 			"LastRegistered": lastRegistered.Format(time.RFC3339),

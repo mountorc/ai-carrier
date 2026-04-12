@@ -78,6 +78,11 @@
     },
     {
       "method": "GET",
+      "path": "/ability/text-search",
+      "handler": "textSearchHandler"
+    },
+    {
+      "method": "GET",
       "path": "/ability/project/list",
       "handler": "listProjectsHandler"
     },
@@ -85,6 +90,26 @@
       "method": "GET",
       "path": "/ability/project/get",
       "handler": "getProjectHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/ability/agent/list",
+      "handler": "getAgentListHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/ability/skill/list",
+      "handler": "getSkillListHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/ability/skill/get",
+      "handler": "getSkillHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/ability/sql/execute/:uuid",
+      "handler": "executeAbilitySQLByUUID"
     }
   ]
 }

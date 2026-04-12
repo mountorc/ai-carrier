@@ -1,0 +1,56 @@
+[
+  {
+    "id": "openclaw-001",
+    "name": "徐铭泽的龙虾助理",
+    "description": "为徐铭泽提供最贴心的AI对话任务能力",
+    "version": "1.0.0",
+    "address": "http://localhost:8080",
+    "type": "personal",
+    "status": "running"
+  },
+  {
+    "id": "openclaw-002",
+    "name": "商品总监的龙虾助理",
+    "description": "专门用于商品分析和管理的数字劳工",
+    "version": "1.2.0",
+    "address": "http://localhost:8081",
+    "type": "data-analysis",
+    "status": "running"
+  },
+  {
+    "id": "openclaw-003",
+    "name": "运营总监的龙虾助理",
+    "description": "专门用于运营分析和管理的数字劳工",
+    "version": "1.1.0",
+    "address": "http://localhost:8082",
+    "type": "code-generation",
+    "status": "running"
+  },
+  {
+    "id": "openclaw-004",
+    "name": "核价龙虾专员",
+    "description": "专门用于核价和价格分析的数字劳工",
+    "version": "1.0.0",
+    "address": "http://localhost:8083",
+    "type": "document-processing",
+    "status": "running"
+  },
+  {
+    "id": "openclaw-005",
+    "name": "商品图生成龙虾",
+    "description": "专门用于商品图片生成的数字劳工",
+    "version": "1.3.0",
+    "address": "http://localhost:8084",
+    "type": "image-generation",
+    "status": "running"
+  },
+  {
+    "id": "openclaw-006",
+    "name": "选址龙虾专员",
+    "description": "专门用于选址分析和评估的数字劳工",
+    "version": "1.0.0",
+    "address": "http://localhost:8085",
+    "type": "location-analysis",
+    "status": "running"
+  }
+]
