@@ -19,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	mountsql "github.com/trae/autoFlow/carriercore/mountcore/sql"
 	"github.com/trae/autoFlow/carriercore/project"
 	"github.com/trae/autoFlow/common/capability"
 	"github.com/trae/autoFlow/common/embedding"
@@ -1815,16 +1816,41 @@ func getAgentListHandler(c *gin.Context) {
 	})
 }
 
-func getSkillListHandler(c *gin.Context) {
+func GetSkillListHandler(c *gin.Context) {
 	log.Println("Getting skill list from database...")
 
-	result, err := GetSkillList()
+	queryText := c.Query("query")
+	vectorText := c.Query("vectorText")
+
+	var result *mountsql.QueryResult
+	var err error
+
+	if queryText != "" || vectorText != "" {
+		searchText := queryText
+		if vectorText != "" {
+			searchText = vectorText
+		}
+
+		log.Printf("Performing vector search for: %s", searchText)
+
+		result, err = SearchSkillsByVector(searchText)
+	} else {
+		result, err = GetSkillList()
+	}
+
 	if err != nil {
 		log.Printf("Error getting skill list: %v", err)
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Message: fmt.Sprintf("Failed to get skills: %v", err),
-		})
+		if strings.Contains(err.Error(), "executor not initialized") || strings.Contains(err.Error(), "embedding service") {
+			c.JSON(http.StatusServiceUnavailable, Response{
+				Success: false,
+				Message: "Database connection not available. Skill service is temporarily unavailable.",
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, Response{
+				Success: false,
+				Message: fmt.Sprintf("Failed to get skills: %v", err),
+			})
+		}
 		return
 	}
 

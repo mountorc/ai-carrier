@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/trae/autoFlow/common/embedding"
 	_ "github.com/lib/pq"
 )
 
@@ -68,9 +69,10 @@ type QueryResult struct {
 }
 
 type Executor struct {
-	db          *sql.DB
-	config      DatabaseConfig
-	sqlRegistry map[string]SQLConfigEntry
+	db             *sql.DB
+	config         DatabaseConfig
+	sqlRegistry    map[string]SQLConfigEntry
+	embeddingService *embedding.EmbeddingService
 }
 
 var instance *Executor
@@ -167,13 +169,24 @@ func NewExecutor(config DatabaseConfig) (*Executor, error) {
 		config.Username, config.Host, config.Port, config.Database)
 
 	executor := &Executor{
-		db:          db,
-		config:      config,
-		sqlRegistry: make(map[string]SQLConfigEntry),
+		db:               db,
+		config:           config,
+		sqlRegistry:      make(map[string]SQLConfigEntry),
+		embeddingService: embeddingService,
 	}
 
+	log.Printf("[DEBUG] Setting global instance to: %v", executor)
+	log.Printf("[DEBUG] Embedding service in executor initialized from global: %v", executor.embeddingService)
 	instance = executor
+	log.Printf("[DEBUG] Global instance set successfully: %v", instance)
 	return executor, nil
+}
+
+func (e *Executor) SetEmbeddingService(service *embedding.EmbeddingService) {
+	e.embeddingService = service
+	if service != nil {
+		log.Println("Embedding service set in SQL executor")
+	}
 }
 
 func (e *Executor) loadSQLConfigs(modules map[string]ModuleConfig) error {
@@ -381,7 +394,7 @@ func (e *Executor) GetSQLByUUID(uuid string) (*SQLConfigEntry, error) {
 }
 
 func (e *Executor) ExecuteSQLByUUID(ctx context.Context, uuid string, args []interface{}) (*QueryResult, error) {
-	sqlStmt, err := GetSQL(uuid, nil)
+	sqlStmt, err := GetSQL(uuid, nil, e.embeddingService)
 	if err != nil {
 		log.Printf("Warning: failed to get SQL from ability config: %v", err)
 		entry, err := e.GetSQLByUUID(uuid)
@@ -396,7 +409,8 @@ func (e *Executor) ExecuteSQLByUUID(ctx context.Context, uuid string, args []int
 }
 
 func (e *Executor) ExecuteSQLByUUIDWithWhere(ctx context.Context, uuid string, where map[string]interface{}, args []interface{}) (*QueryResult, error) {
-	sqlStmt, err := GetSQL(uuid, where)
+	log.Printf("[DEBUG] ExecuteSQLByUUIDWithWhere: e.embeddingService = %v", e.embeddingService)
+	sqlStmt, err := GetSQL(uuid, where, e.embeddingService)
 	if err != nil {
 		return nil, err
 	}
@@ -435,8 +449,11 @@ func ExecuteSQLByUUID(ctx context.Context, uuid string, args []interface{}) (*Qu
 }
 
 func ExecuteSQLByUUIDWithWhere(ctx context.Context, uuid string, where map[string]interface{}, args []interface{}) (*QueryResult, error) {
+	log.Printf("[DEBUG API] ExecuteSQLByUUIDWithWhere called, instance = %v", instance)
 	if instance == nil {
+		log.Println("[ERROR API] Global instance is nil! Executor not initialized properly")
 		return nil, fmt.Errorf("executor not initialized")
 	}
+	log.Printf("[DEBUG API] Calling instance.ExecuteSQLByUUIDWithWhere")
 	return instance.ExecuteSQLByUUIDWithWhere(ctx, uuid, where, args)
 }

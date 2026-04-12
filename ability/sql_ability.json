@@ -5,7 +5,13 @@
       "uuid": "330e8400-e22b-41d4-a716-446655440001",
       "name": "listSkills",
       "description": "获取技能列表，按创建时间倒序排列",
-      "sql": "SELECT uuid, name, nick, description,download, created_at, updated_at FROM skill_store_skills ORDER BY created_at DESC"
+      "sql": "SELECT uuid, name, nick, description,download, created_at, updated_at FROM skill_store_skills ORDER BY created_at DESC",
+      "whereSet":{
+        "vectorText":{
+          "type":"vector",
+          "name":"embedding"
+        }
+      }
     },
     {
       "uuid": "330e8400-e29b-41d4-a716-446655440002",

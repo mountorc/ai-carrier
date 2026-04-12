@@ -3,6 +3,7 @@ package sql
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,7 +35,7 @@ func SetEmbeddingService(service *embedding.EmbeddingService) {
 	embeddingService = service
 }
 
-func GetSQL(uuid string, where map[string]interface{}) (string, error) {
+func GetSQL(uuid string, where map[string]interface{}, embService *embedding.EmbeddingService) (string, error) {
 	sqlConfig, err := loadSQLAbilityConfig()
 	if err != nil {
 		return "", fmt.Errorf("failed to load SQL ability config: %v", err)
@@ -42,7 +43,7 @@ func GetSQL(uuid string, where map[string]interface{}) (string, error) {
 
 	for _, entry := range sqlConfig.SQLs {
 		if entry.UUID == uuid {
-			return buildSQL(entry, where)
+			return buildSQL(entry, where, embService)
 		}
 	}
 
@@ -85,14 +86,14 @@ func loadSQLAbilityConfig() (*SQLConfigWithWhere, error) {
 	return nil, fmt.Errorf("failed to read SQL ability config file")
 }
 
-func buildSQL(entry SQLConfigEntryWithWhere, where map[string]interface{}) (string, error) {
+func buildSQL(entry SQLConfigEntryWithWhere, where map[string]interface{}, embService *embedding.EmbeddingService) (string, error) {
 	sql := entry.SQL
 	whereClauses := []string{}
 
 	if entry.WhereSet != nil && where != nil {
 		for key, value := range where {
 			if whereSetConfig, ok := entry.WhereSet[key]; ok {
-				clause, err := buildWhereClause(key, value, whereSetConfig)
+				clause, err := buildWhereClause(key, value, whereSetConfig, embService)
 				if err != nil {
 					return "", err
 				}
@@ -103,8 +104,16 @@ func buildSQL(entry SQLConfigEntryWithWhere, where map[string]interface{}) (stri
 
 	if len(whereClauses) > 0 {
 		whereSQL := strings.Join(whereClauses, " AND ")
-		if strings.Contains(strings.ToUpper(sql), " WHERE ") {
+		
+		upperSQL := strings.ToUpper(sql)
+		orderIdx := strings.Index(upperSQL, " ORDER BY ")
+		
+		if strings.Contains(upperSQL, " WHERE ") {
 			sql = fmt.Sprintf("%s AND %s", sql, whereSQL)
+		} else if orderIdx > 0 {
+			orderPart := sql[orderIdx:]
+			sql = sql[:orderIdx]
+			sql = fmt.Sprintf("%s WHERE %s %s", sql, whereSQL, orderPart)
 		} else {
 			sql = fmt.Sprintf("%s WHERE %s", sql, whereSQL)
 		}
@@ -113,10 +122,10 @@ func buildSQL(entry SQLConfigEntryWithWhere, where map[string]interface{}) (stri
 	return sql, nil
 }
 
-func buildWhereClause(key string, value interface{}, config WhereSetConfig) (string, error) {
+func buildWhereClause(key string, value interface{}, config WhereSetConfig, embService *embedding.EmbeddingService) (string, error) {
 	switch config.Type {
 	case "vector":
-		return buildVectorClause(key, value, config)
+		return buildVectorClause(key, value, config, embService)
 	case "string":
 		return buildStringClause(key, value)
 	case "number":
@@ -128,7 +137,7 @@ func buildWhereClause(key string, value interface{}, config WhereSetConfig) (str
 	}
 }
 
-func buildVectorClause(key string, value interface{}, config WhereSetConfig) (string, error) {
+func buildVectorClause(key string, value interface{}, config WhereSetConfig, embService *embedding.EmbeddingService) (string, error) {
 	vectorField := config.Name
 	if vectorField == "" {
 		vectorField = key
@@ -139,20 +148,18 @@ func buildVectorClause(key string, value interface{}, config WhereSetConfig) (st
 		return "", fmt.Errorf("vector search value must be a string")
 	}
 
-	var embeddingVector []float32
-	var err error
+	log.Printf("[DEBUG] buildVectorClause: embService = %v", embService)
+	if embService == nil {
+		return "", fmt.Errorf("embedding service not provided in buildVectorClause")
+	}
 
-	if embeddingService != nil {
-		embeddingVector, err = embeddingService.GetEmbedding(valueStr)
-		if err != nil {
-			return "", fmt.Errorf("failed to get embedding: %v", err)
-		}
-	} else {
-		return "", fmt.Errorf("embedding service not initialized")
+	embeddingVector, err := embService.GetEmbedding(valueStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to get embedding: %v", err)
 	}
 
 	vectorStr := vectorToPostgresArray(embeddingVector)
-	return fmt.Sprintf("%s <-> %s < 0.8", vectorField, vectorStr), nil
+	return fmt.Sprintf("%s <-> %s < 1.0", vectorField, vectorStr), nil
 }
 
 func vectorToPostgresArray(vector []float32) string {

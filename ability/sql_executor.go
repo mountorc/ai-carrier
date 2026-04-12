@@ -2,6 +2,7 @@ package ability
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -67,4 +68,22 @@ func SearchSkillsByKeyword(keyword string) (*sql.QueryResult, error) {
 
 func CountSkills() (*sql.QueryResult, error) {
 	return sql.ExecuteSQLByUUID(context.Background(), "330e8400-e29b-41d4-a716-446655440005", []interface{}{})
+}
+
+func ExecuteSkillSQLWithWhere(uuid string, where map[string]interface{}, args []interface{}) (*sql.QueryResult, error) {
+	return sql.ExecuteSQLByUUIDWithWhere(context.Background(), uuid, where, args)
+}
+
+func SearchSkillsByVector(vectorText string) (*sql.QueryResult, error) {
+	log.Printf("[DEBUG SQL_EXECUTOR] SearchSkillsByVector called with: %s", vectorText)
+	where := map[string]interface{}{
+		"vectorText": vectorText,
+	}
+	result, err := sql.ExecuteSQLByUUIDWithWhere(context.Background(), "330e8400-e22b-41d4-a716-446655440001", where, nil)
+	if err != nil {
+		log.Printf("[DEBUG SQL_EXECUTOR] SearchSkillsByVector error: %v", err)
+	} else {
+		log.Printf("[DEBUG SQL_EXECUTOR] SearchSkillsByVector success, found %d results", result.Count)
+	}
+	return result, err
 }

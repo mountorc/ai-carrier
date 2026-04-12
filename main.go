@@ -37,6 +37,8 @@ func main() {
 	} else {
 		log.Println("Embedding service initialized successfully (using Aliyun Qwen model)")
 		ability.SetEmbeddingService(embeddingService)
+		sql.SetEmbeddingService(embeddingService)
+		log.Println("Embedding service set successfully in SQL module")
 	}
 
 	log.Println("Initializing Workflow module...")
@@ -55,6 +57,10 @@ func main() {
 			log.Printf("Warning: failed to initialize SQL executor: %v", err)
 		} else {
 			log.Println("MountCore SQL Executor initialized successfully")
+			if embeddingService != nil {
+				executor.SetEmbeddingService(embeddingService)
+				log.Println("Embedding service set in SQL executor")
+			}
 			defer executor.Close()
 		}
 	}
