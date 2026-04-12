@@ -1836,7 +1836,7 @@ func getSkillListHandler(c *gin.Context) {
 			name        string
 			nick        string
 			description string
-			download    string
+			download    *string
 			createdAt   *time.Time
 			updatedAt   *time.Time
 		)
@@ -1855,12 +1855,12 @@ func getSkillListHandler(c *gin.Context) {
 			"updated_at":  updatedAt,
 		}
 
-		if download != "" {
+		if download != nil && *download != "" {
 			var downloadData map[string]interface{}
-			if err := json.Unmarshal([]byte(download), &downloadData); err == nil {
+			if err := json.Unmarshal([]byte(*download), &downloadData); err == nil {
 				skill["download"] = downloadData
 			} else {
-				skill["download"] = download
+				skill["download"] = *download
 			}
 		}
 
