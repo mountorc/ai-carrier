@@ -94,7 +94,12 @@
     {
       "method": "GET",
       "path": "/ability/agent/list",
-      "handler": "getAgentListHandler"
+      "handler": "GetAgentListDBHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/ability/agent/register",
+      "handler": "AgentRegisterHandler"
     },
     {
       "method": "GET",

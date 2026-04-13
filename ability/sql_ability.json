@@ -42,6 +42,48 @@
       "name": "listSkillsByKeyword",
       "description": "根据关键字搜索技能（名称、昵称、描述）",
       "sql": "SELECT uuid, name, nick, description,download, created_at, updated_at FROM skill_store_skills WHERE name LIKE $1 OR nick LIKE $1 OR description LIKE $1 ORDER BY created_at DESC"
+    },
+    {
+      "uuid": "440e8400-e22b-41d4-a716-446655440001",
+      "name": "listAgents",
+      "description": "获取Agent列表",
+      "sql": "SELECT uuid, name, nick, specialty, description, model, version, platform, agent_model, address, agent_type, status, avatar, avatar_image, carrier_user_id, created_at, updated_at FROM agent_store_agents ORDER BY created_at DESC"
+    },
+    {
+      "uuid": "440e8400-e22b-41d4-a716-446655440002",
+      "name": "getAgent",
+      "description": "根据UUID获取单个Agent详情",
+      "sql": "SELECT uuid, name, nick, specialty, description, model, version, platform, agent_model, address, agent_type, status, avatar, avatar_image, carrier_user_id, created_at, updated_at FROM agent_store_agents WHERE uuid = $1"
+    },
+    {
+      "uuid": "440e8400-e22b-41d4-a716-446655440003",
+      "name": "listAgentsByUser",
+      "description": "根据用户ID获取Agent列表",
+      "sql": "SELECT uuid, name, nick, specialty, description, model, version, platform, agent_model, address, agent_type, status, avatar, avatar_image, carrier_user_id, created_at, updated_at FROM agent_store_agents WHERE carrier_user_id = $1 ORDER BY created_at DESC"
+    },
+    {
+      "uuid": "550e8400-e22b-41d4-a716-446655440001",
+      "name": "listIdentities",
+      "description": "获取身份列表",
+      "sql": "SELECT uuid, name, token, description, status, created_at, updated_at FROM identity WHERE status = 'active' ORDER BY created_at DESC"
+    },
+    {
+      "uuid": "550e8400-e22b-41d4-a716-446655440002",
+      "name": "getIdentityByToken",
+      "description": "根据token验证身份",
+      "sql": "SELECT uuid, name, token, description, status, created_at, updated_at FROM identity WHERE token = $1 AND status = 'active'"
+    },
+    {
+      "uuid": "550e8400-e22b-41d4-a716-446655440003",
+      "name": "getIdentity",
+      "description": "根据UUID获取身份详情",
+      "sql": "SELECT uuid, name, token, description, status, created_at, updated_at FROM identity WHERE uuid = $1"
+    },
+    {
+      "uuid": "440e8400-e22b-41d4-a716-446655440004",
+      "name": "registerAgent",
+      "description": "注册新Agent（报道）",
+      "sql": "INSERT INTO agent_store_agents (uuid, name, nick, specialty, description, model, version, platform, agent_model, address, agent_type, status, avatar, avatar_image, carrier_user_id, identity_token, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW()) ON CONFLICT (uuid) DO UPDATE SET name = $2, nick = $3, specialty = $4, description = $5, model = $6, version = $7, platform = $8, agent_model = $9, address = $10, agent_type = $11, status = $12, avatar = $13, avatar_image = $14, carrier_user_id = $15, identity_token = $16, updated_at = NOW()"
     }
   ]
 }

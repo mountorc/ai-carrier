@@ -198,6 +198,8 @@ func getHandlerMap() map[string]gin.HandlerFunc {
 		"listProjectsHandler":              listProjectsHandler,
 		"getProjectHandler":                getProjectHandler,
 		"getAgentListHandler":              getAgentListHandler,
+		"GetAgentListDBHandler":            GetAgentListDBHandler,
+		"AgentRegisterHandler":             AgentRegisterHandler,
 		"getSkillListHandler":              GetSkillListHandler,
 		"getSkillHandler":                  getSkillHandler,
 		"executeAbilitySQLByUUID":          executeAbilitySQLByUUID,

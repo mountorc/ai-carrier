@@ -1861,6 +1861,132 @@ func GetSkillListHandler(c *gin.Context) {
 	})
 }
 
+func GetAgentListDBHandler(c *gin.Context) {
+	log.Println("Getting agent list from database...")
+
+	result, err := mountsql.ExecuteSQLByUUID(context.Background(), "440e8400-e22b-41d4-a716-446655440001", nil)
+	if err != nil {
+		log.Printf("Error getting agent list: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: "Failed to get agent list",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: fmt.Sprintf("Found %d agents", result.Count),
+		Data:    result.Rows,
+	})
+}
+
+type AgentRegisterRequest struct {
+	UUID           string `json:"uuid"`
+	Name           string `json:"name"`
+	Nick           string `json:"nick"`
+	Specialty      string `json:"specialty"`
+	Description    string `json:"description"`
+	Model          string `json:"model"`
+	Version        string `json:"version"`
+	Platform       string `json:"platform"`
+	AgentModel     string `json:"agent_model"`
+	Address        string `json:"address"`
+	AgentType      string `json:"agent_type"`
+	Status         string `json:"status"`
+	Avatar         string `json:"avatar"`
+	AvatarImage    string `json:"avatar_image"`
+	CarrierUserID  string `json:"carrier_user_id"`
+	IdentityToken  string `json:"identity_token"`
+}
+
+func AgentRegisterHandler(c *gin.Context) {
+	var req AgentRegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("Invalid request: %v", err)
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "Invalid request: " + err.Error(),
+		})
+		return
+	}
+
+	if req.IdentityToken == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "Identity token is required",
+		})
+		return
+	}
+
+	log.Printf("Agent registration request received. Identity token: %s", req.IdentityToken)
+
+	result, err := mountsql.ExecuteSQLByUUID(context.Background(), "550e8400-e22b-41d4-a716-446655440002", []interface{}{req.IdentityToken})
+	if err != nil {
+		log.Printf("Error verifying identity: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: "Failed to verify identity",
+		})
+		return
+	}
+
+	if result.Count == 0 {
+		log.Printf("Identity verification failed: token not found or inactive")
+		c.JSON(http.StatusUnauthorized, Response{
+			Success: false,
+			Message: "Invalid or inactive identity token",
+		})
+		return
+	}
+
+	identityData := result.Rows[0]
+	identityName := identityData["name"].(string)
+	log.Printf("Identity verified: %s", identityName)
+
+	args := []interface{}{
+		req.UUID,
+		req.Name,
+		req.Nick,
+		req.Specialty,
+		req.Description,
+		req.Model,
+		req.Version,
+		req.Platform,
+		req.AgentModel,
+		req.Address,
+		req.AgentType,
+		req.Status,
+		req.Avatar,
+		req.AvatarImage,
+		req.CarrierUserID,
+		req.IdentityToken,
+	}
+
+	registerResult, err := mountsql.ExecuteSQLByUUID(context.Background(), "440e8400-e22b-41d4-a716-446655440004", args)
+	if err != nil {
+		log.Printf("Error registering agent: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: "Failed to register agent: " + err.Error(),
+		})
+		return
+	}
+
+	log.Printf("Agent registered successfully: %s", req.Name)
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: fmt.Sprintf("Agent '%s' registered successfully. Welcome to AI Carrier!", req.Name),
+		Data: map[string]interface{}{
+			"agent_name":    req.Name,
+			"identity_name": identityName,
+			"uuid":          req.UUID,
+			"count":         registerResult.Count,
+		},
+	})
+}
+
 func getSkillHandler(c *gin.Context) {
 	skillUUID := c.Query("uuid")
 	if skillUUID == "" {
