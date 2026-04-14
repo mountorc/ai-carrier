@@ -1388,6 +1388,19 @@ func discoverHandler(c *gin.Context) {
 }
 
 func listHandler(c *gin.Context) {
+	carrierAgentUUID := c.Query("carrier_agent_uuid")
+	if carrierAgentUUID != "" {
+		valid, message := validateAgentUUID(carrierAgentUUID)
+		if !valid {
+			c.JSON(http.StatusUnauthorized, Response{
+				Success: false,
+				Message: message,
+			})
+			return
+		}
+		log.Printf("Agent validated: %s", message)
+	}
+
 	capabilities, err := capClient.ListAll(context.Background())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -1829,6 +1842,19 @@ func getAgentListHandler(c *gin.Context) {
 func GetSkillListHandler(c *gin.Context) {
 	log.Println("Getting skill list from database...")
 
+	carrierAgentUUID := c.Query("carrier_agent_uuid")
+	if carrierAgentUUID != "" {
+		valid, message := validateAgentUUID(carrierAgentUUID)
+		if !valid {
+			c.JSON(http.StatusUnauthorized, Response{
+				Success: false,
+				Message: message,
+			})
+			return
+		}
+		log.Printf("Agent validated: %s", message)
+	}
+
 	queryText := c.Query("query")
 	vectorText := c.Query("vectorText")
 
@@ -2025,6 +2051,19 @@ func AgentRegisterHandler(c *gin.Context) {
 }
 
 func getSkillHandler(c *gin.Context) {
+	carrierAgentUUID := c.Query("carrier_agent_uuid")
+	if carrierAgentUUID != "" {
+		valid, message := validateAgentUUID(carrierAgentUUID)
+		if !valid {
+			c.JSON(http.StatusUnauthorized, Response{
+				Success: false,
+				Message: message,
+			})
+			return
+		}
+		log.Printf("Agent validated: %s", message)
+	}
+
 	skillUUID := c.Query("uuid")
 	if skillUUID == "" {
 		skillUUID = c.Query("id")
@@ -2478,6 +2517,19 @@ func executeWorkerHandler(c *gin.Context) {
 }
 
 func getAbilityHandler(c *gin.Context) {
+	carrierAgentUUID := c.Query("carrier_agent_uuid")
+	if carrierAgentUUID != "" {
+		valid, message := validateAgentUUID(carrierAgentUUID)
+		if !valid {
+			c.JSON(http.StatusUnauthorized, Response{
+				Success: false,
+				Message: message,
+			})
+			return
+		}
+		log.Printf("Agent validated: %s", message)
+	}
+
 	id := c.Query("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, Response{
@@ -2821,6 +2873,25 @@ func insertApiLog(apiName, apiPath, method string, status int, message string, r
 
 func getCarrierAgentUUID(c *gin.Context) string {
 	return c.Query("carrier_agent_uuid")
+}
+
+func validateAgentUUID(carrierAgentUUID string) (bool, string) {
+	if carrierAgentUUID == "" {
+		return true, ""
+	}
+
+	result, err := mountsql.ExecuteSQLByUUID(context.Background(), "770e8400-e22b-41d4-a716-446655440001", []interface{}{carrierAgentUUID})
+	if err != nil {
+		log.Printf("Error validating agent UUID: %v", err)
+		return false, "Internal server error"
+	}
+
+	if result.Count == 0 {
+		return false, "Invalid carrier_agent_uuid: agent not found or not running"
+	}
+
+	agentName := result.Rows[0]["name"].(string)
+	return true, agentName
 }
 
 

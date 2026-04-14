@@ -92,6 +92,18 @@
       "sql": "CREATE TABLE IF NOT EXISTS api_logs (uuid VARCHAR(36) PRIMARY KEY, api_name VARCHAR(100) NOT NULL, api_path VARCHAR(255) NOT NULL, method VARCHAR(10) NOT NULL, status INT NOT NULL, message TEXT, request_data TEXT, response_data TEXT, identity_token VARCHAR(100), user_id VARCHAR(100), carrier_agent_uuid VARCHAR(100), ip_address VARCHAR(50), created_at TIMESTAMP DEFAULT NOW())"
     },
     {
+      "uuid": "660e8400-e22b-41d4-a716-446655440004",
+      "name": "addCarrierAgentUUIDColumn",
+      "description": "为api_logs表添加carrier_agent_uuid字段",
+      "sql": "ALTER TABLE api_logs ADD COLUMN IF NOT EXISTS carrier_agent_uuid VARCHAR(100)"
+    },
+    {
+      "uuid": "770e8400-e22b-41d4-a716-446655440001",
+      "name": "validateAgentUUID",
+      "description": "验证carrier_agent_uuid是否存在于agent列表中",
+      "sql": "SELECT uuid, name, status FROM agent_store_agents WHERE uuid = $1 AND status = 'running'"
+    },
+    {
       "uuid": "660e8400-e22b-41d4-a716-446655440002",
       "name": "insertApiLog",
       "description": "插入API日志记录",
