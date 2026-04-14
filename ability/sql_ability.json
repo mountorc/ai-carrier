@@ -84,6 +84,24 @@
       "name": "registerAgent",
       "description": "注册新Agent（报道）",
       "sql": "INSERT INTO agent_store_agents (uuid, name, nick, specialty, description, model, version, platform, agent_model, address, agent_type, status, avatar, avatar_image, carrier_user_id, identity_token, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW()) ON CONFLICT (uuid) DO UPDATE SET name = $2, nick = $3, specialty = $4, description = $5, model = $6, version = $7, platform = $8, agent_model = $9, address = $10, agent_type = $11, status = $12, avatar = $13, avatar_image = $14, carrier_user_id = $15, identity_token = $16, updated_at = NOW()"
+    },
+    {
+      "uuid": "660e8400-e22b-41d4-a716-446655440001",
+      "name": "createApiLogTable",
+      "description": "创建API日志表",
+      "sql": "CREATE TABLE IF NOT EXISTS api_logs (uuid VARCHAR(36) PRIMARY KEY, api_name VARCHAR(100) NOT NULL, api_path VARCHAR(255) NOT NULL, method VARCHAR(10) NOT NULL, status INT NOT NULL, message TEXT, request_data TEXT, response_data TEXT, identity_token VARCHAR(100), user_id VARCHAR(100), carrier_agent_uuid VARCHAR(100), ip_address VARCHAR(50), created_at TIMESTAMP DEFAULT NOW())"
+    },
+    {
+      "uuid": "660e8400-e22b-41d4-a716-446655440002",
+      "name": "insertApiLog",
+      "description": "插入API日志记录",
+      "sql": "INSERT INTO api_logs (uuid, api_name, api_path, method, status, message, request_data, response_data, identity_token, user_id, carrier_agent_uuid, ip_address) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
+    },
+    {
+      "uuid": "660e8400-e22b-41d4-a716-446655440003",
+      "name": "listApiLogs",
+      "description": "获取API日志列表",
+      "sql": "SELECT uuid, api_name, api_path, method, status, message, identity_token, user_id, ip_address, created_at FROM api_logs ORDER BY created_at DESC LIMIT $1"
     }
   ]
 }

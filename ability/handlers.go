@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	mountsql "github.com/trae/autoFlow/carriercore/mountcore/sql"
 	"github.com/trae/autoFlow/carriercore/project"
@@ -1393,14 +1394,23 @@ func listHandler(c *gin.Context) {
 			"success": false,
 			"message": fmt.Sprintf("Failed to list: %v", err),
 		})
+		go insertApiLog("获取能力列表", c.Request.URL.Path, c.Request.Method, http.StatusInternalServerError, fmt.Sprintf("Failed to list: %v", err), "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
+
+	responseData, _ := json.Marshal(map[string]interface{}{
+		"success":      true,
+		"message":      "Listed successfully",
+		"capabilities": capabilities,
+	})
 
 	c.JSON(http.StatusOK, map[string]interface{}{
 		"success":      true,
 		"message":      "Listed successfully",
 		"capabilities": capabilities,
 	})
+
+	go insertApiLog("获取能力列表", c.Request.URL.Path, c.Request.Method, http.StatusOK, "Success", "", string(responseData), "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 }
 
 func unregisterHandler(c *gin.Context) {
@@ -1851,14 +1861,23 @@ func GetSkillListHandler(c *gin.Context) {
 				Message: fmt.Sprintf("Failed to get skills: %v", err),
 			})
 		}
+		go insertApiLog("获取技能列表", c.Request.URL.Path, c.Request.Method, http.StatusInternalServerError, fmt.Sprintf("Failed to get skills: %v", err), "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
+
+	responseData, _ := json.Marshal(Response{
+		Success: true,
+		Message: fmt.Sprintf("Found %d skills", result.Count),
+		Data:    result.Rows,
+	})
 
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Message: fmt.Sprintf("Found %d skills", result.Count),
 		Data:    result.Rows,
 	})
+
+	go insertApiLog("获取技能列表", c.Request.URL.Path, c.Request.Method, http.StatusOK, "Success", "", string(responseData), "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 }
 
 func GetAgentListDBHandler(c *gin.Context) {
@@ -1908,6 +1927,7 @@ func AgentRegisterHandler(c *gin.Context) {
 			Success: false,
 			Message: "Invalid request: " + err.Error(),
 		})
+		go insertApiLog("Agent报道", c.Request.URL.Path, c.Request.Method, http.StatusBadRequest, "Invalid request: "+err.Error(), "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
 
@@ -1916,6 +1936,7 @@ func AgentRegisterHandler(c *gin.Context) {
 			Success: false,
 			Message: "Identity token is required",
 		})
+		go insertApiLog("Agent报道", c.Request.URL.Path, c.Request.Method, http.StatusBadRequest, "Identity token is required", "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
 
@@ -1928,6 +1949,7 @@ func AgentRegisterHandler(c *gin.Context) {
 			Success: false,
 			Message: "Failed to verify identity",
 		})
+		go insertApiLog("Agent报道", c.Request.URL.Path, c.Request.Method, http.StatusInternalServerError, "Failed to verify identity: "+err.Error(), "", "", req.IdentityToken, "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
 
@@ -1937,6 +1959,7 @@ func AgentRegisterHandler(c *gin.Context) {
 			Success: false,
 			Message: "Invalid or inactive identity token",
 		})
+		go insertApiLog("Agent报道", c.Request.URL.Path, c.Request.Method, http.StatusUnauthorized, "Invalid or inactive identity token", "", "", req.IdentityToken, "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
 
@@ -1970,10 +1993,22 @@ func AgentRegisterHandler(c *gin.Context) {
 			Success: false,
 			Message: "Failed to register agent: " + err.Error(),
 		})
+		go insertApiLog("Agent报道", c.Request.URL.Path, c.Request.Method, http.StatusInternalServerError, "Failed to register agent: "+err.Error(), "", "", req.IdentityToken, req.CarrierUserID, c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
 
 	log.Printf("Agent registered successfully: %s", req.Name)
+
+	responseData, _ := json.Marshal(Response{
+		Success: true,
+		Message: fmt.Sprintf("Agent '%s' registered successfully. Welcome to AI Carrier!", req.Name),
+		Data: map[string]interface{}{
+			"agent_name":    req.Name,
+			"identity_name": identityName,
+			"uuid":          req.UUID,
+			"count":         registerResult.Count,
+		},
+	})
 
 	c.JSON(http.StatusOK, Response{
 		Success: true,
@@ -1985,6 +2020,8 @@ func AgentRegisterHandler(c *gin.Context) {
 			"count":         registerResult.Count,
 		},
 	})
+
+	go insertApiLog("Agent报道", c.Request.URL.Path, c.Request.Method, http.StatusOK, "Success", "", string(responseData), req.IdentityToken, req.CarrierUserID, c.Query("carrier_agent_uuid"), c.ClientIP())
 }
 
 func getSkillHandler(c *gin.Context) {
@@ -1996,6 +2033,7 @@ func getSkillHandler(c *gin.Context) {
 				Success: false,
 				Message: "Missing required parameter: uuid or id",
 			})
+			go insertApiLog("获取技能详情", c.Request.URL.Path, c.Request.Method, http.StatusBadRequest, "Missing required parameter: uuid or id", "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 			return
 		}
 	}
@@ -2019,6 +2057,7 @@ func getSkillHandler(c *gin.Context) {
 			Success: false,
 			Message: fmt.Sprintf("Skill with UUID %s not found", skillUUID),
 		})
+		go insertApiLog("获取技能详情", c.Request.URL.Path, c.Request.Method, http.StatusNotFound, fmt.Sprintf("Skill with UUID %s not found", skillUUID), "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
 
@@ -2028,6 +2067,7 @@ func getSkillHandler(c *gin.Context) {
 			Success: false,
 			Message: fmt.Sprintf("Failed to get skill: %v", err),
 		})
+		go insertApiLog("获取技能详情", c.Request.URL.Path, c.Request.Method, http.StatusInternalServerError, fmt.Sprintf("Failed to get skill: %v", err), "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
 
@@ -2040,11 +2080,19 @@ func getSkillHandler(c *gin.Context) {
 		"updated_at":  updatedAt,
 	}
 
+	responseData, _ := json.Marshal(Response{
+		Success: true,
+		Message: "Skill retrieved successfully",
+		Data:    skill,
+	})
+
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Message: "Skill retrieved successfully",
 		Data:    skill,
 	})
+
+	go insertApiLog("获取技能详情", c.Request.URL.Path, c.Request.Method, http.StatusOK, "Success", "", string(responseData), "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 }
 
 func toggleProxyWorkerEnabledHandler(c *gin.Context) {
@@ -2436,6 +2484,7 @@ func getAbilityHandler(c *gin.Context) {
 			Success: false,
 			Message: "Missing ability id",
 		})
+		go insertApiLog("获取能力详情", c.Request.URL.Path, c.Request.Method, http.StatusBadRequest, "Missing ability id", "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
 
@@ -2445,14 +2494,23 @@ func getAbilityHandler(c *gin.Context) {
 			Success: false,
 			Message: fmt.Sprintf("Failed to get ability: %v", err),
 		})
+		go insertApiLog("获取能力详情", c.Request.URL.Path, c.Request.Method, http.StatusNotFound, fmt.Sprintf("Failed to get ability: %v", err), "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 		return
 	}
+
+	responseData, _ := json.Marshal(map[string]interface{}{
+		"success": true,
+		"message": "Ability retrieved successfully",
+		"ability": cap,
+	})
 
 	c.JSON(http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Ability retrieved successfully",
 		"ability": cap,
 	})
+
+	go insertApiLog("获取能力详情", c.Request.URL.Path, c.Request.Method, http.StatusOK, "Success", "", string(responseData), "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
 }
 
 type AbilityVectorSearchResponse struct {
@@ -2728,3 +2786,41 @@ func calculateDistance(vec1, vec2 []float32) float64 {
 
 	return math.Sqrt(sum)
 }
+
+func initApiLogTable() {
+	_, err := mountsql.ExecuteSQLByUUID(context.Background(), "660e8400-e22b-41d4-a716-446655440001", nil)
+	if err != nil {
+		log.Printf("Warning: Failed to create api_logs table: %v", err)
+	} else {
+		log.Println("API logs table initialized successfully")
+	}
+}
+
+func insertApiLog(apiName, apiPath, method string, status int, message string, requestData, responseData, identityToken, userID, carrierAgentUUID, ipAddress string) {
+	logUUID := uuid.New().String()
+	
+	_, err := mountsql.ExecuteSQLByUUID(context.Background(), "660e8400-e22b-41d4-a716-446655440002", []interface{}{
+		logUUID,
+		apiName,
+		apiPath,
+		method,
+		status,
+		message,
+		requestData,
+		responseData,
+		identityToken,
+		userID,
+		carrierAgentUUID,
+		ipAddress,
+	})
+	
+	if err != nil {
+		log.Printf("Failed to insert API log: %v", err)
+	}
+}
+
+func getCarrierAgentUUID(c *gin.Context) string {
+	return c.Query("carrier_agent_uuid")
+}
+
+
