@@ -113,7 +113,7 @@
       "uuid": "660e8400-e22b-41d4-a716-446655440003",
       "name": "listApiLogs",
       "description": "获取API日志列表",
-      "sql": "SELECT uuid, api_name, api_path, method, status, message, identity_token, user_id, ip_address, created_at FROM api_logs ORDER BY created_at DESC LIMIT $1"
+      "sql": "SELECT uuid, api_name, api_path, method, status, message, request_data, response_data, identity_token, user_id, carrier_agent_uuid, ip_address, created_at FROM api_logs ORDER BY created_at DESC LIMIT $1"
     }
   ]
 }
