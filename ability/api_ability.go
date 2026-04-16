@@ -203,6 +203,7 @@ func getHandlerMap() map[string]gin.HandlerFunc {
 		"getSkillListHandler":              GetSkillListHandler,
 		"getSkillHandler":                  getSkillHandler,
 		"executeAbilitySQLByUUID":          executeAbilitySQLByUUID,
+		"getANXConfigHandler":              getANXConfigHandler,
 	}
 }
 
@@ -217,6 +218,9 @@ func Init() error {
 	if err := initDB(); err != nil {
 		return err
 	}
+
+	// Initialize API logs table
+	initApiLogTable()
 
 	projectRoot := getProjectRoot()
 

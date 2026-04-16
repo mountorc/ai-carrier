@@ -19,28 +19,28 @@ import (
 
 // ProxyAbilityRegisterRequest 定义添加代理能力的请求结构
 type ProxyAbilityRegisterRequest struct {
-	ID           string                   `json:"id"`
-	WorkerNick   string                   `json:"workerNick"`
-	Name         string                   `json:"name"`
-	Type         string                   `json:"type"`
-	Language     string                   `json:"language"`
-	Version      string                   `json:"version"`
-	Address      string                   `json:"address"`
-	Description  string                   `json:"description"`
-	InvokeMethod string                   `json:"invoke_method"`
-	Timeout      int                      `json:"timeout"`
-	ProxyType    string                   `json:"proxy_type"`
-	VirtualIDs   []string                 `json:"virtual_ids"`
-	Owner        string                   `json:"owner"`
-	Permission   string                   `json:"permission"`
-	AiPermission string                   `json:"ai_permission"`
-	Quota        int                      `json:"quota"`
-	MaxInstances int                      `json:"max_instances"`
-	ParamConfigs []capability.ParamConfig `json:"param_configs"`
-	ApiAddress   string                   `json:"api_address"`
-	Enabled      bool                     `json:"enabled"`
-	Project      string                   `json:"project"`
-	UUIDProject  string                   `json:"uuid_project"`
+	ID           string                       `json:"id"`
+	WorkerNick   string                       `json:"workerNick"`
+	Name         string                       `json:"name"`
+	Type         string                       `json:"type"`
+	Language     string                       `json:"language"`
+	Version      string                       `json:"version"`
+	Address      string                       `json:"address"`
+	Description  string                       `json:"description"`
+	InvokeMethod string                       `json:"invoke_method"`
+	Timeout      int                          `json:"timeout"`
+	ProxyType    string                       `json:"proxy_type"`
+	VirtualIDs   []string                     `json:"virtual_ids"`
+	Owner        string                       `json:"owner"`
+	Permission   string                       `json:"permission"`
+	AiPermission string                       `json:"ai_permission"`
+	Quota        int                          `json:"quota"`
+	MaxInstances int                          `json:"max_instances"`
+	ParamConfigs []map[string]interface{}     `json:"param_configs"`
+	ApiAddress   string                       `json:"api_address"`
+	Enabled      bool                         `json:"enabled"`
+	Project      string                       `json:"project"`
+	UUIDProject  string                       `json:"uuid_project"`
 }
 
 // addProxyAbilityHandler 添加代理能力
@@ -52,6 +52,20 @@ func addProxyAbilityHandler(c *gin.Context) {
 			Message: "Invalid request",
 		})
 		return
+	}
+
+	// 兼容处理：以 Kind 为主，Mode 作为过时用法
+	for i := range req.ParamConfigs {
+		kind, _ := req.ParamConfigs[i]["kind"].(string)
+		mode, _ := req.ParamConfigs[i]["mode"].(string)
+		
+		// 如果 Kind 有值，优先使用 Kind
+		if kind != "" {
+			req.ParamConfigs[i]["mode"] = kind
+		} else if mode == "" {
+			// 如果 Kind 和 Mode 都为空，默认为 input
+			req.ParamConfigs[i]["mode"] = "input"
+		}
 	}
 
 	// 注册到 worker 注册中心和能力中心（如果启用）
@@ -181,7 +195,10 @@ func addProxyAbilityHandler(c *gin.Context) {
 			embeddingText := req.Name + " " + req.Description + " " + req.Type + " " + req.Language + " " + strings.Join([]string{"workflow", "worker", req.Type}, " ")
 			// 添加param_configs中的字段
 			for _, param := range req.ParamConfigs {
-				embeddingText += " " + param.Title + " " + param.Nick + " " + param.Mode
+				title, _ := param["title"].(string)
+				nick, _ := param["nick"].(string)
+				desc, _ := param["desc"].(string)
+				embeddingText += " " + title + " " + nick + " " + desc
 			}
 			// 添加api_address
 			if req.ApiAddress != "" {
@@ -440,10 +457,10 @@ func updateProxyAbilityHandler(c *gin.Context) {
 	if currentEnabled {
 		log.Printf("Proxy ability %s is enabled, re-registering to worker registry and capability center", id)
 
-		var paramConfigs []capability.ParamConfig
+		var paramConfigs []map[string]interface{}
 		if len(currentParamConfigsJSON) > 0 {
 			if err := json.Unmarshal(currentParamConfigsJSON, &paramConfigs); err != nil {
-				paramConfigs = []capability.ParamConfig{}
+				paramConfigs = []map[string]interface{}{}
 			}
 		}
 
@@ -524,7 +541,7 @@ func updateProxyAbilityHandler(c *gin.Context) {
 				}
 			}
 			for _, param := range paramConfigs {
-				embeddingText += " " + param.Title + " " + param.Nick + " " + param.Mode
+				embeddingText += " " + param.Title + " " + param.Nick + " " + param.Desc
 			}
 			// 添加api_address
 			if currentApiAddress != "" {
@@ -670,10 +687,10 @@ func toggleProxyAbilityEnabledHandler(c *gin.Context) {
 	if req.Enabled {
 		log.Printf("Proxy ability %s is being enabled, registering to worker registry and capability center", req.ID)
 
-		var paramConfigs []capability.ParamConfig
+		var paramConfigs []map[string]interface{}
 		if len(paramConfigsJSON) > 0 {
 			if err := json.Unmarshal(paramConfigsJSON, &paramConfigs); err != nil {
-				paramConfigs = []capability.ParamConfig{}
+				paramConfigs = []map[string]interface{}{}
 			}
 		}
 
@@ -776,10 +793,10 @@ func getProxyAbilityListHandler(c *gin.Context) {
 			continue
 		}
 
-		var paramConfigs []capability.ParamConfig
+		var paramConfigs []map[string]interface{}
 		if len(paramConfigsJSON) > 0 {
 			if err := json.Unmarshal(paramConfigsJSON, &paramConfigs); err != nil {
-				paramConfigs = []capability.ParamConfig{}
+				paramConfigs = []map[string]interface{}{}
 			}
 		}
 

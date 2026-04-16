@@ -107,30 +107,30 @@ func getProjectHandler(c *gin.Context) {
 }
 
 type RegisterRequest struct {
-	UUIDProject  string                   `json:"uuid_project"`
-	Project      string                   `json:"project"`
-	WorkerNick   string                   `json:"workerNick"`
-	WorkerNick2  string                   `json:"worker_nick"`
-	ID           string                   `json:"id"`
-	Name         string                   `json:"name"`
-	Address      string                   `json:"address"`
-	Type         string                   `json:"type"`
-	Language     string                   `json:"language"`
-	Version      string                   `json:"version"`
-	Description  string                   `json:"description"`
-	Labels       map[string]string        `json:"labels"`
-	Tags         []string                 `json:"tags"`
-	Owner        string                   `json:"owner"`
-	Permission   string                   `json:"permission"`
-	AiPermission string                   `json:"ai_permission"`
-	Quota        int                      `json:"quota"`
-	MaxInstances int                      `json:"max_instances"`
-	ParamConfigs []capability.ParamConfig `json:"param_configs"`
-	InvokeMethod string                   `json:"invoke_method"`
-	Timeout      int                      `json:"timeout"`
-	ProxyType    string                   `json:"proxy_type"`
-	ApiAddress   string                   `json:"api_address"`
-	Enabled      bool                     `json:"enabled"`
+	UUIDProject  string                       `json:"uuid_project"`
+	Project      string                       `json:"project"`
+	WorkerNick   string                       `json:"workerNick"`
+	WorkerNick2  string                       `json:"worker_nick"`
+	ID           string                       `json:"id"`
+	Name         string                       `json:"name"`
+	Address      string                       `json:"address"`
+	Type         string                       `json:"type"`
+	Language     string                       `json:"language"`
+	Version      string                       `json:"version"`
+	Description  string                       `json:"description"`
+	Labels       map[string]string            `json:"labels"`
+	Tags         []string                     `json:"tags"`
+	Owner        string                       `json:"owner"`
+	Permission   string                       `json:"permission"`
+	AiPermission string                       `json:"ai_permission"`
+	Quota        int                          `json:"quota"`
+	MaxInstances int                          `json:"max_instances"`
+	ParamConfigs []map[string]interface{}     `json:"param_configs"`
+	InvokeMethod string                       `json:"invoke_method"`
+	Timeout      int                          `json:"timeout"`
+	ProxyType    string                       `json:"proxy_type"`
+	ApiAddress   string                       `json:"api_address"`
+	Enabled      bool                         `json:"enabled"`
 }
 
 type RegisterResponse struct {
@@ -162,25 +162,25 @@ type DiscoverResponse struct {
 }
 
 type ProxyRegisterRequest struct {
-	ID           string                   `json:"id"`
-	Name         string                   `json:"name"`
-	Type         string                   `json:"type"`
-	Language     string                   `json:"language"`
-	Version      string                   `json:"version"`
-	Address      string                   `json:"address"`
-	Description  string                   `json:"description"`
-	InvokeMethod string                   `json:"invoke_method"`
-	Timeout      int                      `json:"timeout"`
-	ProxyType    string                   `json:"proxy_type"`
-	VirtualIDs   []string                 `json:"virtual_ids"`
-	Owner        string                   `json:"owner"`
-	Permission   string                   `json:"permission"`
-	AiPermission string                   `json:"ai_permission"`
-	Quota        int                      `json:"quota"`
-	MaxInstances int                      `json:"max_instances"`
-	ParamConfigs []capability.ParamConfig `json:"param_configs"`
-	ApiAddress   string                   `json:"api_address"`
-	Enabled      bool                     `json:"enabled"`
+	ID           string                       `json:"id"`
+	Name         string                       `json:"name"`
+	Type         string                       `json:"type"`
+	Language     string                       `json:"language"`
+	Version      string                       `json:"version"`
+	Address      string                       `json:"address"`
+	Description  string                       `json:"description"`
+	InvokeMethod string                       `json:"invoke_method"`
+	Timeout      int                          `json:"timeout"`
+	ProxyType    string                       `json:"proxy_type"`
+	VirtualIDs   []string                     `json:"virtual_ids"`
+	Owner        string                       `json:"owner"`
+	Permission   string                       `json:"permission"`
+	AiPermission string                       `json:"ai_permission"`
+	Quota        int                          `json:"quota"`
+	MaxInstances int                          `json:"max_instances"`
+	ParamConfigs []map[string]interface{}     `json:"param_configs"`
+	ApiAddress   string                       `json:"api_address"`
+	Enabled      bool                         `json:"enabled"`
 }
 
 func startSchedulerInstanceHandler(c *gin.Context) {
@@ -1005,7 +1005,10 @@ func workerRegisterHandler(c *gin.Context) {
 		}
 		// 添加param_configs中的字段
 		for _, param := range req.ParamConfigs {
-			embeddingText += " " + param.Title + " " + param.Nick + " " + param.Mode
+			title, _ := param["title"].(string)
+			nick, _ := param["nick"].(string)
+			mode, _ := param["mode"].(string)
+			embeddingText += " " + title + " " + nick + " " + mode
 		}
 		// 添加api_address
 		if req.ApiAddress != "" {
@@ -1300,7 +1303,7 @@ func discoverHandler(c *gin.Context) {
 						options, _ := worker["Options"].(map[string]interface{})
 						apiAddress := ""
 						description := ""
-						var paramConfigs []capability.ParamConfig
+						var paramConfigs []map[string]interface{}
 
 						if options != nil {
 							if addr, ok := options["ApiAddress"].(string); ok {
@@ -1312,26 +1315,7 @@ func discoverHandler(c *gin.Context) {
 							if params, ok := options["ParamConfigs"].([]interface{}); ok {
 								for _, p := range params {
 									if paramMap, ok := p.(map[string]interface{}); ok {
-										param := capability.ParamConfig{}
-										if title, ok := paramMap["Title"].(string); ok {
-											param.Title = title
-										}
-										if nick, ok := paramMap["Nick"].(string); ok {
-											param.Nick = nick
-										}
-										if mode, ok := paramMap["Mode"].(string); ok {
-											param.Mode = mode
-										}
-										if must, ok := paramMap["Must"].(bool); ok {
-											param.Must = must
-										}
-										if placeholder, ok := paramMap["Placeholder"].(string); ok {
-											param.Placeholder = placeholder
-										}
-										if value, ok := paramMap["Value"].(string); ok {
-											param.Value = value
-										}
-										paramConfigs = append(paramConfigs, param)
+										paramConfigs = append(paramConfigs, paramMap)
 									}
 								}
 							}
@@ -1683,42 +1667,11 @@ func updateProxyWorkerHandler(c *gin.Context) {
 			workerOptions.Project = "proxyWorkers"
 			workerOptions.WorkerNick = id
 
-			var configs []capability.ParamConfig
+			var configs []map[string]interface{}
 			if paramConfigs != nil {
 				for _, pc := range paramConfigs {
 					if pcMap, ok := pc.(map[string]interface{}); ok {
-						config := capability.ParamConfig{}
-						if title, ok := pcMap["Title"].(string); ok {
-							config.Title = title
-						} else if title, ok := pcMap["title"].(string); ok {
-							config.Title = title
-						}
-						if nick, ok := pcMap["Nick"].(string); ok {
-							config.Nick = nick
-						} else if nick, ok := pcMap["nick"].(string); ok {
-							config.Nick = nick
-						}
-						if mode, ok := pcMap["Mode"].(string); ok {
-							config.Mode = mode
-						} else if mode, ok := pcMap["mode"].(string); ok {
-							config.Mode = mode
-						}
-						if must, ok := pcMap["Must"].(bool); ok {
-							config.Must = must
-						} else if must, ok := pcMap["must"].(bool); ok {
-							config.Must = must
-						}
-						if placeholder, ok := pcMap["Placeholder"].(string); ok {
-							config.Placeholder = placeholder
-						} else if placeholder, ok := pcMap["placeholder"].(string); ok {
-							config.Placeholder = placeholder
-						}
-						if value, ok := pcMap["Value"].(string); ok {
-							config.Value = value
-						} else if value, ok := pcMap["value"].(string); ok {
-							config.Value = value
-						}
-						configs = append(configs, config)
+						configs = append(configs, pcMap)
 					}
 				}
 				workerOptions.ParamConfigs = configs
@@ -2214,42 +2167,11 @@ func toggleProxyWorkerEnabledHandler(c *gin.Context) {
 			workerOptions.Project = "proxyWorkers"
 			workerOptions.WorkerNick = req.ID
 
-			var configs []capability.ParamConfig
+			var configs []map[string]interface{}
 			if paramConfigs != nil {
 				for _, pc := range paramConfigs {
 					if pcMap, ok := pc.(map[string]interface{}); ok {
-						config := capability.ParamConfig{}
-						if title, ok := pcMap["Title"].(string); ok {
-							config.Title = title
-						} else if title, ok := pcMap["title"].(string); ok {
-							config.Title = title
-						}
-						if nick, ok := pcMap["Nick"].(string); ok {
-							config.Nick = nick
-						} else if nick, ok := pcMap["nick"].(string); ok {
-							config.Nick = nick
-						}
-						if mode, ok := pcMap["Mode"].(string); ok {
-							config.Mode = mode
-						} else if mode, ok := pcMap["mode"].(string); ok {
-							config.Mode = mode
-						}
-						if must, ok := pcMap["Must"].(bool); ok {
-							config.Must = must
-						} else if must, ok := pcMap["must"].(bool); ok {
-							config.Must = must
-						}
-						if placeholder, ok := pcMap["Placeholder"].(string); ok {
-							config.Placeholder = placeholder
-						} else if placeholder, ok := pcMap["placeholder"].(string); ok {
-							config.Placeholder = placeholder
-						}
-						if value, ok := pcMap["Value"].(string); ok {
-							config.Value = value
-						} else if value, ok := pcMap["value"].(string); ok {
-							config.Value = value
-						}
-						configs = append(configs, config)
+						configs = append(configs, pcMap)
 					}
 				}
 				workerOptions.ParamConfigs = configs
@@ -2563,6 +2485,57 @@ func getAbilityHandler(c *gin.Context) {
 	})
 
 	go insertApiLog("获取能力详情", c.Request.URL.Path, c.Request.Method, http.StatusOK, "Success", "", string(responseData), "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
+}
+
+func getANXConfigHandler(c *gin.Context) {
+	abilityID := c.Param("ability_id")
+	if abilityID == "" {
+		c.JSON(http.StatusBadRequest, map[string]interface{}{
+			"config": map[string]interface{}{},
+		})
+		return
+	}
+
+	var paramConfigs []map[string]interface{}
+
+	cap, err := capClient.GetMetadata(context.Background(), abilityID)
+	if err == nil && cap.ParamConfigs != nil {
+		jsonBytes, _ := json.Marshal(cap.ParamConfigs)
+		json.Unmarshal(jsonBytes, &paramConfigs)
+	} else {
+		parsedID := abilityID
+		if parts := strings.Split(abilityID, "@"); len(parts) > 1 {
+			idPart := parts[0]
+			if dotParts := strings.Split(idPart, "."); len(dotParts) > 1 {
+				parsedID = strings.Join(dotParts[1:], ".")
+			} else {
+				parsedID = idPart
+			}
+		}
+		if strings.Contains(parsedID, ".") && !strings.Contains(parsedID, "@") {
+			if dotParts := strings.Split(parsedID, "."); len(dotParts) > 1 {
+				parsedID = strings.Join(dotParts[1:], ".")
+			}
+		}
+
+		var paramConfigsJSON []byte
+		err := pgDB.QueryRow(`
+			SELECT param_configs FROM ability_proxy WHERE id = $1
+		`, parsedID).Scan(&paramConfigsJSON)
+
+		if err == nil && len(paramConfigsJSON) > 0 {
+			json.Unmarshal(paramConfigsJSON, &paramConfigs)
+		}
+	}
+
+	config := map[string]interface{}{
+		"kind":  "form",
+		"kinds": paramConfigs,
+	}
+
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"config": config,
+	})
 }
 
 type AbilityVectorSearchResponse struct {

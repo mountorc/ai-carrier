@@ -115,6 +115,11 @@
       "method": "POST",
       "path": "/ability/sql/execute/:uuid",
       "handler": "executeAbilitySQLByUUID"
+    },
+    {
+      "method": "GET",
+      "path": "/ability/anx/config/:ability_id",
+      "handler": "getANXConfigHandler"
     }
   ]
 }
