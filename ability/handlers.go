@@ -34,6 +34,28 @@ var (
 	ProjectManager *project.ProjectManager
 )
 
+// logAbilityRegistration 记录能力注册日志
+func logAbilityRegistration(workerID, message string, level ...string) {
+	logLevel := "INFO"
+	if len(level) > 0 {
+		logLevel = level[0]
+	}
+
+	logPath := "/Users/a1-6/Documents/code/trae/autoFlow/log/log_ability_registration.log"
+	file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Printf("Failed to open log file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	logLine := fmt.Sprintf("[%s] [%s] [%s] - %s\n", timestamp, logLevel, workerID, message)
+	if _, err := file.WriteString(logLine); err != nil {
+		log.Printf("Failed to write log: %v", err)
+	}
+}
+
 // SetEmbeddingService 设置嵌入服务实例
 func SetEmbeddingService(service *embedding.EmbeddingService) {
 	embeddingService = service
@@ -107,30 +129,33 @@ func getProjectHandler(c *gin.Context) {
 }
 
 type RegisterRequest struct {
-	UUIDProject  string                       `json:"uuid_project"`
-	Project      string                       `json:"project"`
-	WorkerNick   string                       `json:"workerNick"`
-	WorkerNick2  string                       `json:"worker_nick"`
-	ID           string                       `json:"id"`
-	Name         string                       `json:"name"`
-	Address      string                       `json:"address"`
-	Type         string                       `json:"type"`
-	Language     string                       `json:"language"`
-	Version      string                       `json:"version"`
-	Description  string                       `json:"description"`
-	Labels       map[string]string            `json:"labels"`
-	Tags         []string                     `json:"tags"`
-	Owner        string                       `json:"owner"`
-	Permission   string                       `json:"permission"`
-	AiPermission string                       `json:"ai_permission"`
-	Quota        int                          `json:"quota"`
-	MaxInstances int                          `json:"max_instances"`
-	ParamConfigs []map[string]interface{}     `json:"param_configs"`
-	InvokeMethod string                       `json:"invoke_method"`
-	Timeout      int                          `json:"timeout"`
-	ProxyType    string                       `json:"proxy_type"`
-	ApiAddress   string                       `json:"api_address"`
-	Enabled      bool                         `json:"enabled"`
+	UUIDProject  string                   `json:"uuid_project"`
+	Project      string                   `json:"project"`
+	WorkerNick   string                   `json:"workerNick"`
+	WorkerNick2  string                   `json:"worker_nick"`
+	ID           string                   `json:"id"`
+	Name         string                   `json:"name"`
+	Address      string                   `json:"address"`
+	Type         string                   `json:"type"`
+	Language     string                   `json:"language"`
+	Version      string                   `json:"version"`
+	Description  string                   `json:"description"`
+	Labels       map[string]string        `json:"labels"`
+	Tags         []string                 `json:"tags"`
+	Owner        string                   `json:"owner"`
+	Permission   string                   `json:"permission"`
+	AiPermission string                   `json:"ai_permission"`
+	Quota        int                      `json:"quota"`
+	MaxInstances int                      `json:"max_instances"`
+	ParamConfigs []map[string]interface{} `json:"param_configs"`
+	AnxConfig    map[string]interface{}   `json:"anx_config"`
+	InvokeMethod string                   `json:"invoke_method"`
+	Timeout      int                      `json:"timeout"`
+	ProxyType    string                   `json:"proxy_type"`
+	ApiAddress   string                   `json:"api_address"`
+	ApiStatus    map[string]interface{}   `json:"api_status"`
+	ApiResult    map[string]interface{}   `json:"api_result"`
+	Enabled      bool                     `json:"enabled"`
 }
 
 type RegisterResponse struct {
@@ -162,25 +187,25 @@ type DiscoverResponse struct {
 }
 
 type ProxyRegisterRequest struct {
-	ID           string                       `json:"id"`
-	Name         string                       `json:"name"`
-	Type         string                       `json:"type"`
-	Language     string                       `json:"language"`
-	Version      string                       `json:"version"`
-	Address      string                       `json:"address"`
-	Description  string                       `json:"description"`
-	InvokeMethod string                       `json:"invoke_method"`
-	Timeout      int                          `json:"timeout"`
-	ProxyType    string                       `json:"proxy_type"`
-	VirtualIDs   []string                     `json:"virtual_ids"`
-	Owner        string                       `json:"owner"`
-	Permission   string                       `json:"permission"`
-	AiPermission string                       `json:"ai_permission"`
-	Quota        int                          `json:"quota"`
-	MaxInstances int                          `json:"max_instances"`
-	ParamConfigs []map[string]interface{}     `json:"param_configs"`
-	ApiAddress   string                       `json:"api_address"`
-	Enabled      bool                         `json:"enabled"`
+	ID           string                   `json:"id"`
+	Name         string                   `json:"name"`
+	Type         string                   `json:"type"`
+	Language     string                   `json:"language"`
+	Version      string                   `json:"version"`
+	Address      string                   `json:"address"`
+	Description  string                   `json:"description"`
+	InvokeMethod string                   `json:"invoke_method"`
+	Timeout      int                      `json:"timeout"`
+	ProxyType    string                   `json:"proxy_type"`
+	VirtualIDs   []string                 `json:"virtual_ids"`
+	Owner        string                   `json:"owner"`
+	Permission   string                   `json:"permission"`
+	AiPermission string                   `json:"ai_permission"`
+	Quota        int                      `json:"quota"`
+	MaxInstances int                      `json:"max_instances"`
+	ParamConfigs []map[string]interface{} `json:"param_configs"`
+	ApiAddress   string                   `json:"api_address"`
+	Enabled      bool                     `json:"enabled"`
 }
 
 func startSchedulerInstanceHandler(c *gin.Context) {
@@ -955,6 +980,28 @@ func workerRegisterHandler(c *gin.Context) {
 	req.Labels["workerNick"] = req.WorkerNick
 	req.Labels["worker_nick"] = req.WorkerNick
 
+	// 如果提供了完整的 anx_config，优先使用它
+	// 如果没有提供 anx_config，但提供了 param_configs，则从 param_configs 构建 anx_config
+	var anxConfig map[string]interface{}
+	if req.AnxConfig != nil && len(req.AnxConfig) > 0 {
+		anxConfig = req.AnxConfig
+		// 如果提供了完整的 anx_config，从中提取 param_configs（如果存在）
+		if kinds, ok := req.AnxConfig["kinds"].([]interface{}); ok {
+			req.ParamConfigs = make([]map[string]interface{}, 0, len(kinds))
+			for _, kind := range kinds {
+				if k, ok := kind.(map[string]interface{}); ok {
+					req.ParamConfigs = append(req.ParamConfigs, k)
+				}
+			}
+		}
+	} else if len(req.ParamConfigs) > 0 {
+		// 从 param_configs 构建默认的 anx_config
+		anxConfig = map[string]interface{}{
+			"kind":  "form",
+			"kinds": req.ParamConfigs,
+		}
+	}
+
 	cap := &capability.Capability{
 		ID:           workerID,
 		Name:         req.Name,
@@ -971,9 +1018,13 @@ func workerRegisterHandler(c *gin.Context) {
 		Quota:        req.Quota,
 		MaxInstances: req.MaxInstances,
 		ParamConfigs: req.ParamConfigs,
+		AnxConfig:    anxConfig,
 		InvokeMethod: req.InvokeMethod,
 		Timeout:      req.Timeout,
 		ProxyType:    req.ProxyType,
+		ApiAddress:   req.ApiAddress,
+		ApiStatus:    req.ApiStatus,
+		ApiResult:    req.ApiResult,
 		Online:       true,
 		Heartbeat:    time.Now(),
 	}
@@ -987,12 +1038,22 @@ func workerRegisterHandler(c *gin.Context) {
 
 	err = capClient.Register(context.Background(), cap)
 	if err != nil {
+		logAbilityRegistration(workerID, fmt.Sprintf("Registration failed: %v", err), "ERROR")
 		c.JSON(http.StatusInternalServerError, RegisterResponse{
 			Success: false,
 			Message: fmt.Sprintf("Failed to register: %v", err),
 		})
 		return
 	}
+
+	// 记录注册成功日志
+	anxConfigInfo := "none"
+	if anxConfig != nil && len(anxConfig) > 0 {
+		anxConfigInfo = "provided"
+	}
+	log.Printf("===== LOGGING ABILITY REGISTRATION ===== WorkerID: %s, Name: %s, Type: %s, AnxConfig: %s", workerID, req.Name, req.Type, anxConfigInfo)
+	logAbilityRegistration(workerID, fmt.Sprintf("Registered successfully. Name: %s, Type: %s, AnxConfig: %s, Params: %d",
+		req.Name, req.Type, anxConfigInfo, len(req.ParamConfigs)))
 
 	// 生成向量嵌入
 	var embedding []float32
@@ -1045,12 +1106,13 @@ func workerRegisterHandler(c *gin.Context) {
 	paramConfigsJSON, _ := json.Marshal(req.ParamConfigs)
 	inputSchemaJSON, _ := json.Marshal(map[string]interface{}{})
 	outputSchemaJSON, _ := json.Marshal(map[string]interface{}{})
+	anxConfigJSON, _ := json.Marshal(anxConfig)
 
 	sql := `
 		INSERT INTO ability_template 
 		(id, project, worker_type, name, description, type, version, 
-		 input_schema, output_schema, tags, param_configs, embedding, embedding_type, is_enabled, is_auto_created, last_register_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW(), NOW())
+		 input_schema, output_schema, tags, param_configs, anx_config, embedding, embedding_type, is_enabled, is_auto_created, last_register_at, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW(), NOW(), NOW())
 		ON CONFLICT (id) DO UPDATE SET
 		name = $4,
 		description = $5,
@@ -1059,9 +1121,10 @@ func workerRegisterHandler(c *gin.Context) {
 		output_schema = $9,
 		tags = $10,
 		param_configs = $11,
-		embedding = $12,
-		embedding_type = $13,
-		is_enabled = $14,
+		anx_config = $12,
+		embedding = $13,
+		embedding_type = $14,
+		is_enabled = $15,
 		last_register_at = NOW(),
 		updated_at = NOW()
 	`
@@ -1078,6 +1141,7 @@ func workerRegisterHandler(c *gin.Context) {
 		outputSchemaJSON,
 		tagsJSON,
 		paramConfigsJSON,
+		anxConfigJSON, // anx_config as JSON
 		embeddingJSON, // embedding as JSON
 		"qwen",        // embedding_type
 		req.Enabled,
@@ -1792,73 +1856,6 @@ func getAgentListHandler(c *gin.Context) {
 	})
 }
 
-func GetSkillListHandler(c *gin.Context) {
-	log.Println("Getting skill list from database...")
-
-	carrierAgentUUID := c.Query("carrier_agent_uuid")
-	if carrierAgentUUID != "" {
-		valid, message := validateAgentUUID(carrierAgentUUID)
-		if !valid {
-			c.JSON(http.StatusUnauthorized, Response{
-				Success: false,
-				Message: message,
-			})
-			return
-		}
-		log.Printf("Agent validated: %s", message)
-	}
-
-	queryText := c.Query("query")
-	vectorText := c.Query("vectorText")
-
-	var result *mountsql.QueryResult
-	var err error
-
-	if queryText != "" || vectorText != "" {
-		searchText := queryText
-		if vectorText != "" {
-			searchText = vectorText
-		}
-
-		log.Printf("Performing vector search for: %s", searchText)
-
-		result, err = SearchSkillsByVector(searchText)
-	} else {
-		result, err = GetSkillList()
-	}
-
-	if err != nil {
-		log.Printf("Error getting skill list: %v", err)
-		if strings.Contains(err.Error(), "executor not initialized") || strings.Contains(err.Error(), "embedding service") {
-			c.JSON(http.StatusServiceUnavailable, Response{
-				Success: false,
-				Message: "Database connection not available. Skill service is temporarily unavailable.",
-			})
-		} else {
-			c.JSON(http.StatusInternalServerError, Response{
-				Success: false,
-				Message: fmt.Sprintf("Failed to get skills: %v", err),
-			})
-		}
-		go insertApiLog("获取技能列表", c.Request.URL.Path, c.Request.Method, http.StatusInternalServerError, fmt.Sprintf("Failed to get skills: %v", err), "", "", "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
-		return
-	}
-
-	responseData, _ := json.Marshal(Response{
-		Success: true,
-		Message: fmt.Sprintf("Found %d skills", result.Count),
-		Data:    result.Rows,
-	})
-
-	c.JSON(http.StatusOK, Response{
-		Success: true,
-		Message: fmt.Sprintf("Found %d skills", result.Count),
-		Data:    result.Rows,
-	})
-
-	go insertApiLog("获取技能列表", c.Request.URL.Path, c.Request.Method, http.StatusOK, "Success", "", string(responseData), "", "", c.Query("carrier_agent_uuid"), c.ClientIP())
-}
-
 func GetAgentListDBHandler(c *gin.Context) {
 	log.Println("Getting agent list from database...")
 
@@ -1880,22 +1877,22 @@ func GetAgentListDBHandler(c *gin.Context) {
 }
 
 type AgentRegisterRequest struct {
-	UUID           string `json:"uuid"`
-	Name           string `json:"name"`
-	Nick           string `json:"nick"`
-	Specialty      string `json:"specialty"`
-	Description    string `json:"description"`
-	Model          string `json:"model"`
-	Version        string `json:"version"`
-	Platform       string `json:"platform"`
-	AgentModel     string `json:"agent_model"`
-	Address        string `json:"address"`
-	AgentType      string `json:"agent_type"`
-	Status         string `json:"status"`
-	Avatar         string `json:"avatar"`
-	AvatarImage    string `json:"avatar_image"`
-	CarrierUserID  string `json:"carrier_user_id"`
-	IdentityToken  string `json:"identity_token"`
+	UUID          string `json:"uuid"`
+	Name          string `json:"name"`
+	Nick          string `json:"nick"`
+	Specialty     string `json:"specialty"`
+	Description   string `json:"description"`
+	Model         string `json:"model"`
+	Version       string `json:"version"`
+	Platform      string `json:"platform"`
+	AgentModel    string `json:"agent_model"`
+	Address       string `json:"address"`
+	AgentType     string `json:"agent_type"`
+	Status        string `json:"status"`
+	Avatar        string `json:"avatar"`
+	AvatarImage   string `json:"avatar_image"`
+	CarrierUserID string `json:"carrier_user_id"`
+	IdentityToken string `json:"identity_token"`
 }
 
 func AgentRegisterHandler(c *gin.Context) {
@@ -2496,12 +2493,19 @@ func getANXConfigHandler(c *gin.Context) {
 		return
 	}
 
-	var paramConfigs []map[string]interface{}
+	var config map[string]interface{}
 
 	cap, err := capClient.GetMetadata(context.Background(), abilityID)
-	if err == nil && cap.ParamConfigs != nil {
+	if err == nil && cap.AnxConfig != nil && len(cap.AnxConfig) > 0 {
+		config = cap.AnxConfig
+	} else if err == nil && cap.ParamConfigs != nil && len(cap.ParamConfigs) > 0 {
 		jsonBytes, _ := json.Marshal(cap.ParamConfigs)
+		var paramConfigs []map[string]interface{}
 		json.Unmarshal(jsonBytes, &paramConfigs)
+		config = map[string]interface{}{
+			"kind":  "form",
+			"kinds": paramConfigs,
+		}
 	} else {
 		parsedID := abilityID
 		if parts := strings.Split(abilityID, "@"); len(parts) > 1 {
@@ -2518,19 +2522,29 @@ func getANXConfigHandler(c *gin.Context) {
 			}
 		}
 
+		var anxConfigJSON []byte
 		var paramConfigsJSON []byte
 		err := pgDB.QueryRow(`
-			SELECT param_configs FROM ability_proxy WHERE id = $1
-		`, parsedID).Scan(&paramConfigsJSON)
+			SELECT anx_config, param_configs FROM ability_proxy WHERE id = $1
+		`, parsedID).Scan(&anxConfigJSON, &paramConfigsJSON)
 
-		if err == nil && len(paramConfigsJSON) > 0 {
+		if err == nil && len(anxConfigJSON) > 0 {
+			json.Unmarshal(anxConfigJSON, &config)
+		} else if err == nil && len(paramConfigsJSON) > 0 {
+			var paramConfigs []map[string]interface{}
 			json.Unmarshal(paramConfigsJSON, &paramConfigs)
+			config = map[string]interface{}{
+				"kind":  "form",
+				"kinds": paramConfigs,
+			}
 		}
 	}
 
-	config := map[string]interface{}{
-		"kind":  "form",
-		"kinds": paramConfigs,
+	if config == nil {
+		config = map[string]interface{}{
+			"kind":  "form",
+			"kinds": []interface{}{},
+		}
 	}
 
 	c.JSON(http.StatusOK, map[string]interface{}{
@@ -2823,7 +2837,7 @@ func initApiLogTable() {
 
 func insertApiLog(apiName, apiPath, method string, status int, message string, requestData, responseData, identityToken, userID, carrierAgentUUID, ipAddress string) {
 	logUUID := uuid.New().String()
-	
+
 	_, err := mountsql.ExecuteSQLByUUID(context.Background(), "660e8400-e22b-41d4-a716-446655440002", []interface{}{
 		logUUID,
 		apiName,
@@ -2838,7 +2852,7 @@ func insertApiLog(apiName, apiPath, method string, status int, message string, r
 		carrierAgentUUID,
 		ipAddress,
 	})
-	
+
 	if err != nil {
 		log.Printf("Failed to insert API log: %v", err)
 	}
@@ -2866,5 +2880,3 @@ func validateAgentUUID(carrierAgentUUID string) (bool, string) {
 	agentName := result.Rows[0]["name"].(string)
 	return true, agentName
 }
-
-

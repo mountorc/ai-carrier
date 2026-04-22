@@ -19,28 +19,31 @@ import (
 
 // ProxyAbilityRegisterRequest 定义添加代理能力的请求结构
 type ProxyAbilityRegisterRequest struct {
-	ID           string                       `json:"id"`
-	WorkerNick   string                       `json:"workerNick"`
-	Name         string                       `json:"name"`
-	Type         string                       `json:"type"`
-	Language     string                       `json:"language"`
-	Version      string                       `json:"version"`
-	Address      string                       `json:"address"`
-	Description  string                       `json:"description"`
-	InvokeMethod string                       `json:"invoke_method"`
-	Timeout      int                          `json:"timeout"`
-	ProxyType    string                       `json:"proxy_type"`
-	VirtualIDs   []string                     `json:"virtual_ids"`
-	Owner        string                       `json:"owner"`
-	Permission   string                       `json:"permission"`
-	AiPermission string                       `json:"ai_permission"`
-	Quota        int                          `json:"quota"`
-	MaxInstances int                          `json:"max_instances"`
-	ParamConfigs []map[string]interface{}     `json:"param_configs"`
-	ApiAddress   string                       `json:"api_address"`
-	Enabled      bool                         `json:"enabled"`
-	Project      string                       `json:"project"`
-	UUIDProject  string                       `json:"uuid_project"`
+	ID           string                   `json:"id"`
+	WorkerNick   string                   `json:"workerNick"`
+	Name         string                   `json:"name"`
+	Type         string                   `json:"type"`
+	Language     string                   `json:"language"`
+	Version      string                   `json:"version"`
+	Address      string                   `json:"address"`
+	Description  string                   `json:"description"`
+	InvokeMethod string                   `json:"invoke_method"`
+	Timeout      int                      `json:"timeout"`
+	ProxyType    string                   `json:"proxy_type"`
+	VirtualIDs   []string                 `json:"virtual_ids"`
+	Owner        string                   `json:"owner"`
+	Permission   string                   `json:"permission"`
+	AiPermission string                   `json:"ai_permission"`
+	Quota        int                      `json:"quota"`
+	MaxInstances int                      `json:"max_instances"`
+	ParamConfigs []map[string]interface{} `json:"param_configs"`
+	AnxConfig    map[string]interface{}   `json:"anx_config"`
+	ApiAddress   string                   `json:"api_address"`
+	ApiStatus    map[string]interface{}   `json:"api_status"`
+	ApiResult    map[string]interface{}   `json:"api_result"`
+	Enabled      bool                     `json:"enabled"`
+	Project      string                   `json:"project"`
+	UUIDProject  string                   `json:"uuid_project"`
 }
 
 // addProxyAbilityHandler 添加代理能力
@@ -54,17 +57,39 @@ func addProxyAbilityHandler(c *gin.Context) {
 		return
 	}
 
-	// 兼容处理：以 Kind 为主，Mode 作为过时用法
-	for i := range req.ParamConfigs {
-		kind, _ := req.ParamConfigs[i]["kind"].(string)
-		mode, _ := req.ParamConfigs[i]["mode"].(string)
-		
-		// 如果 Kind 有值，优先使用 Kind
-		if kind != "" {
-			req.ParamConfigs[i]["mode"] = kind
-		} else if mode == "" {
-			// 如果 Kind 和 Mode 都为空，默认为 input
-			req.ParamConfigs[i]["mode"] = "input"
+	// 如果提供了完整的 anx_config，优先使用它
+	// 如果没有提供 anx_config，但提供了 param_configs，则从 param_configs 构建 anx_config
+	if req.AnxConfig == nil || len(req.AnxConfig) == 0 {
+		if len(req.ParamConfigs) > 0 {
+			// 兼容处理：以 Kind 为主，Mode 作为过时用法
+			for i := range req.ParamConfigs {
+				kind, _ := req.ParamConfigs[i]["kind"].(string)
+				mode, _ := req.ParamConfigs[i]["mode"].(string)
+
+				// 如果 Kind 有值，优先使用 Kind
+				if kind != "" {
+					req.ParamConfigs[i]["mode"] = kind
+				} else if mode == "" {
+					// 如果 Kind 和 Mode 都为空，默认为 input
+					req.ParamConfigs[i]["mode"] = "input"
+				}
+			}
+
+			// 从 param_configs 构建默认的 anx_config
+			req.AnxConfig = map[string]interface{}{
+				"kind":  "form",
+				"kinds": req.ParamConfigs,
+			}
+		}
+	} else {
+		// 如果提供了完整的 anx_config，从中提取 param_configs（如果存在）
+		if kinds, ok := req.AnxConfig["kinds"].([]interface{}); ok {
+			req.ParamConfigs = make([]map[string]interface{}, 0, len(kinds))
+			for _, kind := range kinds {
+				if k, ok := kind.(map[string]interface{}); ok {
+					req.ParamConfigs = append(req.ParamConfigs, k)
+				}
+			}
 		}
 	}
 
@@ -138,6 +163,9 @@ func addProxyAbilityHandler(c *gin.Context) {
 			Quota:        req.Quota,
 			MaxInstances: req.MaxInstances,
 			ParamConfigs: req.ParamConfigs,
+			ApiAddress:   req.ApiAddress,
+			ApiStatus:    req.ApiStatus,
+			ApiResult:    req.ApiResult,
 			Online:       true,
 			Heartbeat:    time.Now(),
 		}
@@ -157,9 +185,14 @@ func addProxyAbilityHandler(c *gin.Context) {
 		paramConfigsJSON = []byte("[]")
 	}
 
+	anxConfigJSON, err := json.Marshal(req.AnxConfig)
+	if err != nil {
+		anxConfigJSON = []byte("{}")
+	}
+
 	_, err = pgDB.Exec(`
-		INSERT INTO ability_proxy (id, name, worker_type, enabled, description, api_address, param_configs, project, uuid_project, last_registered)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+		INSERT INTO ability_proxy (id, name, worker_type, enabled, description, api_address, param_configs, anx_config, project, uuid_project, last_registered)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
 		ON CONFLICT (id) DO UPDATE SET
 			name = $2,
 			worker_type = $3,
@@ -167,13 +200,15 @@ func addProxyAbilityHandler(c *gin.Context) {
 			description = $5,
 			api_address = $6,
 			param_configs = $7,
-			project = $8,
-			uuid_project = $9,
+			anx_config = $8,
+			project = $9,
+			uuid_project = $10,
 			last_registered = CURRENT_TIMESTAMP,
 			updated_at = CURRENT_TIMESTAMP
-	`, req.ID, req.Name, req.Type, req.Enabled, req.Description, req.ApiAddress, paramConfigsJSON, req.Project, req.UUIDProject)
+	`, req.ID, req.Name, req.Type, req.Enabled, req.Description, req.ApiAddress, paramConfigsJSON, anxConfigJSON, req.Project, req.UUIDProject)
 
 	if err != nil {
+		logAbilityRegistration(req.ID, fmt.Sprintf("Proxy registration failed: %v", err), "ERROR")
 		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,
 			Message: fmt.Sprintf("Failed to save proxy ability to database: %v", err),
@@ -181,6 +216,12 @@ func addProxyAbilityHandler(c *gin.Context) {
 		return
 	}
 
+	anxConfigInfo := "none"
+	if req.AnxConfig != nil && len(req.AnxConfig) > 0 {
+		anxConfigInfo = "provided"
+	}
+	logAbilityRegistration(req.ID, fmt.Sprintf("Proxy registered successfully. Name: %s, Type: %s, AnxConfig: %s, Params: %d", 
+		req.Name, req.Type, anxConfigInfo, len(req.ParamConfigs)))
 	log.Printf("Proxy ability %s saved to database successfully", req.ID)
 
 	// 同时将代理能力注册到数据库的ability_template表中
@@ -294,12 +335,12 @@ func getProxyAbilityHandler(c *gin.Context) {
 	var name, workerType, description, apiAddress, project, uuidProject string
 	var enabled bool
 	var lastRegistered, createdAt, updatedAt time.Time
-	var paramConfigsJSON []byte
+	var paramConfigsJSON, anxConfigJSON []byte
 
 	err := pgDB.QueryRow(`
-		SELECT id, name, worker_type, enabled, description, api_address, param_configs, project, uuid_project, last_registered, created_at, updated_at
+		SELECT id, name, worker_type, enabled, description, api_address, param_configs, anx_config, project, uuid_project, last_registered, created_at, updated_at
 		FROM ability_proxy WHERE id = $1
-	`, id).Scan(&id, &name, &workerType, &enabled, &description, &apiAddress, &paramConfigsJSON, &project, &uuidProject, &lastRegistered, &createdAt, &updatedAt)
+	`, id).Scan(&id, &name, &workerType, &enabled, &description, &apiAddress, &paramConfigsJSON, &anxConfigJSON, &project, &uuidProject, &lastRegistered, &createdAt, &updatedAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -323,6 +364,13 @@ func getProxyAbilityHandler(c *gin.Context) {
 		}
 	}
 
+	var anxConfig map[string]interface{}
+	if len(anxConfigJSON) > 0 {
+		if err := json.Unmarshal(anxConfigJSON, &anxConfig); err != nil {
+			anxConfig = map[string]interface{}{}
+		}
+	}
+
 	targetAbility := map[string]interface{}{
 		"ID":          id,
 		"Name":        name,
@@ -334,6 +382,7 @@ func getProxyAbilityHandler(c *gin.Context) {
 			"Description":  description,
 			"ApiAddress":   apiAddress,
 			"ParamConfigs": paramConfigs,
+			"AnxConfig":    anxConfig,
 		},
 		"LastRegistered": lastRegistered.Format(time.RFC3339),
 		"CreatedAt":      createdAt.Format(time.RFC3339),
@@ -392,12 +441,12 @@ func updateProxyAbilityHandler(c *gin.Context) {
 	var currentEnabled bool
 	var currentName, currentWorkerType, currentProject, currentUUIDProject string
 	var currentDescription, currentApiAddress string
-	var currentParamConfigsJSON []byte
+	var currentParamConfigsJSON, currentAnxConfigJSON []byte
 
 	err := pgDB.QueryRow(`
-		SELECT name, worker_type, enabled, description, api_address, param_configs, project, uuid_project
+		SELECT name, worker_type, enabled, description, api_address, param_configs, anx_config, project, uuid_project
 		FROM ability_proxy WHERE id = $1
-	`, id).Scan(&currentName, &currentWorkerType, &currentEnabled, &currentDescription, &currentApiAddress, &currentParamConfigsJSON, &currentProject, &currentUUIDProject)
+	`, id).Scan(&currentName, &currentWorkerType, &currentEnabled, &currentDescription, &currentApiAddress, &currentParamConfigsJSON, &currentAnxConfigJSON, &currentProject, &currentUUIDProject)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -437,13 +486,19 @@ func updateProxyAbilityHandler(c *gin.Context) {
 				currentParamConfigsJSON = paramConfigsJSON
 			}
 		}
+		if anxConfig, ok := options["anx_config"].(map[string]interface{}); ok {
+			anxConfigJSON, err := json.Marshal(anxConfig)
+			if err == nil {
+				currentAnxConfigJSON = anxConfigJSON
+			}
+		}
 	}
 
 	_, err = pgDB.Exec(`
 		UPDATE ability_proxy 
-		SET name = $1, description = $2, api_address = $3, param_configs = $4, project = $5, uuid_project = $6, updated_at = CURRENT_TIMESTAMP, last_registered = CURRENT_TIMESTAMP
-		WHERE id = $7
-	`, currentName, currentDescription, currentApiAddress, currentParamConfigsJSON, currentProject, currentUUIDProject, id)
+		SET name = $1, description = $2, api_address = $3, param_configs = $4, anx_config = $5, project = $6, uuid_project = $7, updated_at = CURRENT_TIMESTAMP, last_registered = CURRENT_TIMESTAMP
+		WHERE id = $8
+	`, currentName, currentDescription, currentApiAddress, currentParamConfigsJSON, currentAnxConfigJSON, currentProject, currentUUIDProject, id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, map[string]interface{}{
@@ -764,7 +819,7 @@ func toggleProxyAbilityEnabledHandler(c *gin.Context) {
 // getProxyAbilityListHandler 获取代理能力列表
 func getProxyAbilityListHandler(c *gin.Context) {
 	rows, err := pgDB.Query(`
-		SELECT id, name, worker_type, enabled, description, api_address, param_configs, project, uuid_project, last_registered, created_at, updated_at
+		SELECT id, name, worker_type, enabled, description, api_address, param_configs, anx_config, project, uuid_project, last_registered, created_at, updated_at
 		FROM ability_proxy
 		ORDER BY created_at DESC
 	`)
@@ -785,9 +840,9 @@ func getProxyAbilityListHandler(c *gin.Context) {
 		var description, apiAddress, project, uuidProject sql.NullString
 		var enabled bool
 		var lastRegistered, createdAt, updatedAt time.Time
-		var paramConfigsJSON []byte
+		var paramConfigsJSON, anxConfigJSON []byte
 
-		err := rows.Scan(&id, &name, &workerType, &enabled, &description, &apiAddress, &paramConfigsJSON, &project, &uuidProject, &lastRegistered, &createdAt, &updatedAt)
+		err := rows.Scan(&id, &name, &workerType, &enabled, &description, &apiAddress, &paramConfigsJSON, &anxConfigJSON, &project, &uuidProject, &lastRegistered, &createdAt, &updatedAt)
 		if err != nil {
 			log.Printf("Failed to scan proxy ability row: %v", err)
 			continue
@@ -797,6 +852,13 @@ func getProxyAbilityListHandler(c *gin.Context) {
 		if len(paramConfigsJSON) > 0 {
 			if err := json.Unmarshal(paramConfigsJSON, &paramConfigs); err != nil {
 				paramConfigs = []map[string]interface{}{}
+			}
+		}
+
+		var anxConfig map[string]interface{}
+		if len(anxConfigJSON) > 0 {
+			if err := json.Unmarshal(anxConfigJSON, &anxConfig); err != nil {
+				anxConfig = map[string]interface{}{}
 			}
 		}
 
@@ -832,6 +894,7 @@ func getProxyAbilityListHandler(c *gin.Context) {
 				"Description":  descriptionStr,
 				"ApiAddress":   apiAddressStr,
 				"ParamConfigs": paramConfigs,
+				"AnxConfig":    anxConfig,
 			},
 			"LastRegistered": lastRegistered.Format(time.RFC3339),
 			"CreatedAt":      createdAt.Format(time.RFC3339),

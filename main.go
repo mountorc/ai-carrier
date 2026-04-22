@@ -15,8 +15,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/trae/autoFlow/carriercore/ability"
 	"github.com/trae/autoFlow/carriercore/apiregistry"
+	"github.com/trae/autoFlow/carriercore/auth"
 	"github.com/trae/autoFlow/carriercore/mountcore/sql"
 	"github.com/trae/autoFlow/carriercore/scheduler"
+	"github.com/trae/autoFlow/carriercore/skill"
 	workflowHandlers "github.com/trae/autoFlow/carriercore/workflow"
 	"github.com/trae/autoFlow/common/embedding"
 	"github.com/trae/autoFlow/mounts/skills"
@@ -73,6 +75,22 @@ func main() {
 		defer scheduler.Close()
 	}
 
+	log.Println("Initializing Skill module...")
+	if err := skill.Init(); err != nil {
+		log.Printf("Warning: failed to initialize Skill: %v", err)
+	} else {
+		log.Println("Skill module initialized successfully")
+		defer skill.Close()
+	}
+
+	log.Println("Initializing Auth module...")
+	if err := auth.Init(); err != nil {
+		log.Printf("Warning: failed to initialize Auth: %v", err)
+	} else {
+		log.Println("Auth module initialized successfully")
+		defer auth.Close()
+	}
+
 	router := gin.Default()
 	apiregistry.SetupCORS(router)
 
@@ -80,6 +98,8 @@ func main() {
 	workflowHandlers.RegisterRoutes(router)
 	ability.RegisterRoutes(router)
 	scheduler.RegisterRoutes(router)
+	skill.RegisterRoutes(router)
+	auth.RegisterRoutes(router)
 	if err := skills.RegisterRoutes(router); err != nil {
 		log.Printf("Warning: failed to register skills routes: %v", err)
 	} else {

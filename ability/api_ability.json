@@ -102,16 +102,6 @@
       "handler": "AgentRegisterHandler"
     },
     {
-      "method": "GET",
-      "path": "/ability/skill/list",
-      "handler": "getSkillListHandler"
-    },
-    {
-      "method": "GET",
-      "path": "/ability/skill/get",
-      "handler": "getSkillHandler"
-    },
-    {
       "method": "POST",
       "path": "/ability/sql/execute/:uuid",
       "handler": "executeAbilitySQLByUUID"

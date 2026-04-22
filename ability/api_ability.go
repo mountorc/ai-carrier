@@ -171,6 +171,16 @@ func initDB() error {
 		log.Println("project and uuid_project columns added successfully")
 	}
 
+	log.Println("Adding anx_config column if not exists...")
+	_, err = pgDB.Exec(`
+		ALTER TABLE ability_proxy ADD COLUMN IF NOT EXISTS anx_config JSONB
+	`)
+	if err != nil {
+		log.Printf("Warning: failed to add anx_config column: %v", err)
+	} else {
+		log.Println("anx_config column added successfully")
+	}
+
 	return nil
 }
 
@@ -200,8 +210,6 @@ func getHandlerMap() map[string]gin.HandlerFunc {
 		"getAgentListHandler":              getAgentListHandler,
 		"GetAgentListDBHandler":            GetAgentListDBHandler,
 		"AgentRegisterHandler":             AgentRegisterHandler,
-		"getSkillListHandler":              GetSkillListHandler,
-		"getSkillHandler":                  getSkillHandler,
 		"executeAbilitySQLByUUID":          executeAbilitySQLByUUID,
 		"getANXConfigHandler":              getANXConfigHandler,
 	}
