@@ -1,0 +1,30 @@
+{
+  "description": "技能中心 API 配置文件 - 提供技能列表、技能详情、创建、更新、删除等技能相关接口",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/ability/skill/list",
+      "handler": "GetSkillListHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/ability/skill/get",
+      "handler": "getSkillHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/ability/skill/create",
+      "handler": "CreateSkillHandler"
+    },
+    {
+      "method": "PUT",
+      "path": "/ability/skill/update",
+      "handler": "UpdateSkillHandler"
+    },
+    {
+      "method": "DELETE",
+      "path": "/ability/skill/delete",
+      "handler": "DeleteSkillHandler"
+    }
+  ]
+}

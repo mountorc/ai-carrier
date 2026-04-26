@@ -17,6 +17,7 @@ import (
 	"github.com/trae/autoFlow/carriercore/apiregistry"
 	"github.com/trae/autoFlow/carriercore/auth"
 	"github.com/trae/autoFlow/carriercore/mountcore/sql"
+	"github.com/trae/autoFlow/carriercore/oss"
 	"github.com/trae/autoFlow/carriercore/scheduler"
 	"github.com/trae/autoFlow/carriercore/skill"
 	workflowHandlers "github.com/trae/autoFlow/carriercore/workflow"
@@ -91,6 +92,13 @@ func main() {
 		defer auth.Close()
 	}
 
+	log.Println("Initializing OSS module...")
+	if err := oss.Init("./mount_config.json"); err != nil {
+		log.Printf("Warning: failed to initialize OSS: %v", err)
+	} else {
+		log.Println("OSS module initialized successfully")
+	}
+
 	router := gin.Default()
 	apiregistry.SetupCORS(router)
 
@@ -100,6 +108,7 @@ func main() {
 	scheduler.RegisterRoutes(router)
 	skill.RegisterRoutes(router)
 	auth.RegisterRoutes(router)
+	oss.RegisterRoutes(router)
 	if err := skills.RegisterRoutes(router); err != nil {
 		log.Printf("Warning: failed to register skills routes: %v", err)
 	} else {
