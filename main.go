@@ -93,7 +93,7 @@ func main() {
 	}
 
 	log.Println("Initializing OSS module...")
-	if err := oss.Init("./mount_config.json"); err != nil {
+	if err := oss.Init("./data/oss_token.json"); err != nil {
 		log.Printf("Warning: failed to initialize OSS: %v", err)
 	} else {
 		log.Println("OSS module initialized successfully")

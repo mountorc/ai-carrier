@@ -19,11 +19,13 @@ func RegisterRoutes(router *gin.Engine) {
 
 	ossGroup.POST("/upload", handleUpload)
 	ossGroup.POST("/upload-by-token", handleUploadByToken)
+	ossGroup.POST("/upload-form", handleUploadForm)
 	ossGroup.POST("/create-folder", handleCreateFolder)
 	ossGroup.POST("/generate-token", handleGenerateToken)
 	ossGroup.POST("/validate-token", handleValidateToken)
 	ossGroup.GET("/tokens", handleListTokens)
 	ossGroup.DELETE("/token/:token", handleDeleteToken)
+	ossGroup.GET("/list-files", handleListFiles)
 
 	log.Println("OSS routes registered successfully")
 }
@@ -70,9 +72,9 @@ func handleUpload(c *gin.Context) {
 
 func handleUploadByToken(c *gin.Context) {
 	var req struct {
-		Token     string `json:"token"`
-		FileName  string `json:"fileName"`
-		Content   string `json:"content"`
+		Token    string `json:"token"`
+		FileName string `json:"fileName"`
+		Content  string `json:"content"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -231,11 +233,11 @@ func handleListTokens(c *gin.Context) {
 	var tokenList []interface{}
 	for token, info := range tokens {
 		tokenList = append(tokenList, map[string]interface{}{
-			"token":        token,
+			"token":         token,
 			"uuid_autoAuth": info.UuidAutoAuth,
-			"basePath":     info.BasePath,
-			"createdAt":    info.CreatedAt,
-			"expiresAt":    info.ExpiresAt,
+			"basePath":      info.BasePath,
+			"createdAt":     info.CreatedAt,
+			"expiresAt":     info.ExpiresAt,
 		})
 	}
 
@@ -270,5 +272,81 @@ func handleDeleteToken(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Message: "Token deleted successfully",
+	})
+}
+
+func handleListFiles(c *gin.Context) {
+	uuidAutoAuth := c.Query("uuid_autoAuth")
+	prefix := c.Query("prefix")
+
+	if uuidAutoAuth == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "uuid_autoAuth is required",
+		})
+		return
+	}
+
+	client := GetInstance()
+	if client == nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: "OSS client not initialized",
+		})
+		return
+	}
+
+	files, err := client.ListFiles(uuidAutoAuth, prefix)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: fmt.Sprintf("Found %d files", len(files)),
+		Data:    files,
+	})
+}
+
+func handleUploadForm(c *gin.Context) {
+	token := c.PostForm("token")
+	if token == "" {
+		token = c.GetHeader("X-Upload-Token")
+	}
+
+	if token == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "token is required",
+		})
+		return
+	}
+
+	client := GetInstance()
+	if client == nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: "OSS client not initialized",
+		})
+		return
+	}
+
+	fileUrl, err := client.UploadFormData(token, c.Request)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Upload successful",
+		Data:    fileUrl,
 	})
 }
