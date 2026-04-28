@@ -2494,19 +2494,25 @@ func getANXConfigHandler(c *gin.Context) {
 	}
 
 	var config map[string]interface{}
+	var abilityExists bool
 
 	cap, err := capClient.GetMetadata(context.Background(), abilityID)
-	if err == nil && cap.AnxConfig != nil && len(cap.AnxConfig) > 0 {
-		config = cap.AnxConfig
-	} else if err == nil && cap.ParamConfigs != nil && len(cap.ParamConfigs) > 0 {
-		jsonBytes, _ := json.Marshal(cap.ParamConfigs)
-		var paramConfigs []map[string]interface{}
-		json.Unmarshal(jsonBytes, &paramConfigs)
-		config = map[string]interface{}{
-			"kind":  "form",
-			"kinds": paramConfigs,
+	if err == nil {
+		abilityExists = true
+		if cap.AnxConfig != nil && len(cap.AnxConfig) > 0 {
+			config = cap.AnxConfig
+		} else if cap.ParamConfigs != nil && len(cap.ParamConfigs) > 0 {
+			jsonBytes, _ := json.Marshal(cap.ParamConfigs)
+			var paramConfigs []map[string]interface{}
+			json.Unmarshal(jsonBytes, &paramConfigs)
+			config = map[string]interface{}{
+				"kind":  "form",
+				"kinds": paramConfigs,
+			}
 		}
-	} else {
+	}
+
+	if !abilityExists {
 		parsedID := abilityID
 		if parts := strings.Split(abilityID, "@"); len(parts) > 1 {
 			idPart := parts[0]
@@ -2528,16 +2534,27 @@ func getANXConfigHandler(c *gin.Context) {
 			SELECT anx_config, param_configs FROM ability_proxy WHERE id = $1
 		`, parsedID).Scan(&anxConfigJSON, &paramConfigsJSON)
 
-		if err == nil && len(anxConfigJSON) > 0 {
-			json.Unmarshal(anxConfigJSON, &config)
-		} else if err == nil && len(paramConfigsJSON) > 0 {
-			var paramConfigs []map[string]interface{}
-			json.Unmarshal(paramConfigsJSON, &paramConfigs)
-			config = map[string]interface{}{
-				"kind":  "form",
-				"kinds": paramConfigs,
+		if err == nil {
+			abilityExists = true
+			if len(anxConfigJSON) > 0 {
+				json.Unmarshal(anxConfigJSON, &config)
+			} else if len(paramConfigsJSON) > 0 {
+				var paramConfigs []map[string]interface{}
+				json.Unmarshal(paramConfigsJSON, &paramConfigs)
+				config = map[string]interface{}{
+					"kind":  "form",
+					"kinds": paramConfigs,
+				}
 			}
 		}
+	}
+
+	if !abilityExists {
+		c.JSON(http.StatusOK, map[string]interface{}{
+			"config":  nil,
+			"message": "无能力",
+		})
+		return
 	}
 
 	if config == nil {
