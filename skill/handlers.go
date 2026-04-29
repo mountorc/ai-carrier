@@ -100,19 +100,24 @@ func getSkillHandler(c *gin.Context) {
 
 	log.Printf("Getting skill with UUID: %s", skillUUID)
 
-	var (
-		uuid        string
-		name        string
-		nick        string
-		description string
-		createdAt   time.Time
-		updatedAt   time.Time
-	)
+	result, err := GetSkillByUUID(skillUUID)
+	if err != nil {
+		log.Printf("Error querying skill: %v", err)
+		if strings.Contains(err.Error(), "未找到 UUID") {
+			c.JSON(http.StatusNotFound, Response{
+				Success: false,
+				Message: fmt.Sprintf("Skill with UUID %s not found", skillUUID),
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, Response{
+				Success: false,
+				Message: fmt.Sprintf("Failed to get skill: %v", err),
+			})
+		}
+		return
+	}
 
-	err := pgDB.QueryRow(`SELECT uuid, name, nick, description, created_at, updated_at FROM skill_store_skills WHERE uuid = $1`, skillUUID).
-		Scan(&uuid, &name, &nick, &description, &createdAt, &updatedAt)
-
-	if err == sql.ErrNoRows {
+	if result.Count == 0 {
 		c.JSON(http.StatusNotFound, Response{
 			Success: false,
 			Message: fmt.Sprintf("Skill with UUID %s not found", skillUUID),
@@ -120,28 +125,10 @@ func getSkillHandler(c *gin.Context) {
 		return
 	}
 
-	if err != nil {
-		log.Printf("Error querying skill: %v", err)
-		c.JSON(http.StatusInternalServerError, Response{
-			Success: false,
-			Message: fmt.Sprintf("Failed to get skill: %v", err),
-		})
-		return
-	}
-
-	skill := map[string]interface{}{
-		"uuid":        uuid,
-		"name":        name,
-		"nick":        nick,
-		"description": description,
-		"created_at":  createdAt,
-		"updated_at":  updatedAt,
-	}
-
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Message: "Skill retrieved successfully",
-		Data:    skill,
+		Data:    result.Rows[0],
 	})
 }
 
