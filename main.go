@@ -93,7 +93,7 @@ func main() {
 	}
 
 	log.Println("Initializing OSS module...")
-	if err := oss.Init("./data/oss_token.json"); err != nil {
+	if err := oss.Init("../data/oss_token.json"); err != nil {
 		log.Printf("Warning: failed to initialize OSS: %v", err)
 	} else {
 		log.Println("OSS module initialized successfully")
@@ -109,12 +109,6 @@ func main() {
 	skill.RegisterRoutes(router)
 	auth.RegisterRoutes(router)
 	oss.RegisterRoutes(router)
-	if err := skills.RegisterRoutes(router); err != nil {
-		log.Printf("Warning: failed to register skills routes: %v", err)
-	} else {
-		log.Println("Skills routes registered successfully")
-	}
-
 	registerMountSQLRoutes(router)
 
 	port := os.Getenv("PORT")
@@ -126,9 +120,27 @@ func main() {
 	log.Printf("MountCore Service starting on %s", addr)
 	log.Printf("Visit http://localhost:%s to test", port)
 
-	if err := router.Run(addr); err != nil {
-		log.Fatalf("Server startup failed: %v", err)
-	}
+	// 在后台启动服务器，这样我们就可以继续注册其他路由
+	go func() {
+		if err := router.Run(addr); err != nil {
+			log.Fatalf("Server startup failed: %v", err)
+		}
+	}()
+
+	// 等待一小段时间确保服务器启动
+	time.Sleep(100 * time.Millisecond)
+
+	log.Println("Now registering skills routes in background...")
+	go func() {
+		if err := skills.RegisterRoutes(router); err != nil {
+			log.Printf("Warning: failed to register skills routes: %v", err)
+		} else {
+			log.Println("Skills routes registered successfully")
+		}
+	}()
+
+	// 保持主 goroutine 运行
+	select {}
 }
 
 func registerMountSQLRoutes(router *gin.Engine) {

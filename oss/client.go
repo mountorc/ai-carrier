@@ -99,8 +99,21 @@ func (c *Client) RemoveToken(token string) {
 	c.inner.RemoveToken(token)
 }
 
+func (c *Client) ClearTokens() {
+	c.inner.ClearTokens()
+}
+
+func (c *Client) ReloadTokens(configPath string) error {
+	c.inner.ClearTokens()
+	return c.inner.LoadTokensFromFile(configPath)
+}
+
 func (c *Client) ListFiles(uuidAutoAuth, prefix string) ([]map[string]interface{}, error) {
 	return c.inner.ListFiles(uuidAutoAuth, prefix)
+}
+
+func (c *Client) ListFilesByToken(token, relativePath string) ([]map[string]interface{}, error) {
+	return c.inner.ListFilesByToken(token, relativePath)
 }
 
 func (c *Client) UploadByTokenWithReader(token, fileName string, reader io.Reader) (string, error) {

@@ -26,6 +26,7 @@ func RegisterRoutes(router *gin.Engine) {
 	ossGroup.GET("/tokens", handleListTokens)
 	ossGroup.DELETE("/token/:token", handleDeleteToken)
 	ossGroup.GET("/list-files", handleListFiles)
+	ossGroup.POST("/reload-tokens", handleReloadTokens)
 
 	log.Println("OSS routes registered successfully")
 }
@@ -276,16 +277,9 @@ func handleDeleteToken(c *gin.Context) {
 }
 
 func handleListFiles(c *gin.Context) {
+	token := c.Query("token")
 	uuidAutoAuth := c.Query("uuid_autoAuth")
 	prefix := c.Query("prefix")
-
-	if uuidAutoAuth == "" {
-		c.JSON(http.StatusBadRequest, Response{
-			Success: false,
-			Message: "uuid_autoAuth is required",
-		})
-		return
-	}
 
 	client := GetInstance()
 	if client == nil {
@@ -296,7 +290,23 @@ func handleListFiles(c *gin.Context) {
 		return
 	}
 
-	files, err := client.ListFiles(uuidAutoAuth, prefix)
+	var files []map[string]interface{}
+	var err error
+
+	if token != "" {
+		// 使用token获取文件
+		files, err = client.ListFilesByToken(token, prefix)
+	} else if uuidAutoAuth != "" {
+		// 使用uuidAutoAuth获取文件
+		files, err = client.ListFiles(uuidAutoAuth, prefix)
+	} else {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "Either token or uuid_autoAuth is required",
+		})
+		return
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,
@@ -348,5 +358,33 @@ func handleUploadForm(c *gin.Context) {
 		Success: true,
 		Message: "Upload successful",
 		Data:    fileUrl,
+	})
+}
+
+func handleReloadTokens(c *gin.Context) {
+	client := GetInstance()
+	if client == nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: "OSS client not initialized",
+		})
+		return
+	}
+
+	err := client.ReloadTokens("../data/oss_token.json")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: fmt.Sprintf("Reload tokens failed: %v", err),
+		})
+		return
+	}
+
+	tokens := client.GetAllTokens()
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: fmt.Sprintf("Tokens reloaded successfully, loaded %d tokens", len(tokens)),
+		Data:    len(tokens),
 	})
 }
