@@ -20,6 +20,7 @@ import (
 	"github.com/trae/autoFlow/carriercore/oss"
 	"github.com/trae/autoFlow/carriercore/scheduler"
 	"github.com/trae/autoFlow/carriercore/skill"
+	"github.com/trae/autoFlow/carriercore/task"
 	workflowHandlers "github.com/trae/autoFlow/carriercore/workflow"
 	"github.com/trae/autoFlow/common/embedding"
 	"github.com/trae/autoFlow/mounts/skills"
@@ -99,6 +100,13 @@ func main() {
 		log.Println("OSS module initialized successfully")
 	}
 
+	log.Println("Initializing Task module...")
+	if err := task.Init(); err != nil {
+		log.Printf("Warning: failed to initialize Task: %v", err)
+	} else {
+		log.Println("Task module initialized successfully")
+	}
+
 	router := gin.Default()
 	apiregistry.SetupCORS(router)
 
@@ -109,6 +117,7 @@ func main() {
 	skill.RegisterRoutes(router)
 	auth.RegisterRoutes(router)
 	oss.RegisterRoutes(router)
+	task.RegisterRoutes(router)
 	registerMountSQLRoutes(router)
 
 	port := os.Getenv("PORT")

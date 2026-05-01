@@ -17,12 +17,27 @@
       "handler": "CreateSkillHandler"
     },
     {
+      "method": "POST",
+      "path": "/ability/skill/register",
+      "handler": "RegisterSkillHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/ability/skill/upload",
+      "handler": "UploadSkillHandler"
+    },
+    {
       "method": "PUT",
       "path": "/ability/skill/update",
       "handler": "UpdateSkillHandler"
     },
     {
       "method": "DELETE",
+      "path": "/ability/skill/delete",
+      "handler": "DeleteSkillHandler"
+    },
+    {
+      "method": "POST",
       "path": "/ability/skill/delete",
       "handler": "DeleteSkillHandler"
     }
