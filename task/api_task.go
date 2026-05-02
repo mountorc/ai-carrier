@@ -316,9 +316,9 @@ func ListTasksHandler(c *gin.Context) {
 }
 
 func GetTaskHandler(c *gin.Context) {
-	taskUUID := c.Query("uuid")
+	taskUUID := c.Query("uuid_task")
 	if taskUUID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid_task is required"})
 		return
 	}
 
@@ -441,6 +441,8 @@ func CreateTaskHandler(c *gin.Context) {
 }
 
 func UpdateTaskHandler(c *gin.Context) {
+	taskUUID := c.Query("uuid_task")
+
 	var input struct {
 		UUIDTask             string     `json:"uuid_task"`
 		Description          string     `json:"description"`
@@ -462,12 +464,21 @@ func UpdateTaskHandler(c *gin.Context) {
 		return
 	}
 
+	if taskUUID == "" {
+		taskUUID = input.UUIDTask
+	}
+
+	if taskUUID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid_task is required"})
+		return
+	}
+
 	now := time.Now()
 
-	sqlStr := `UPDATE task SET 
-		description = $1, type = $2, uuid_agent = $3, start_time = $4, end_time = $5, 
-		status = $6, uuid_identity_executor = $7, result = $8, priority = $9, tags = $10, 
-		updated_at = $11, started_at = $12, completed_at = $13 
+	sqlStr := `UPDATE task SET
+		description = $1, type = $2, uuid_agent = $3, start_time = $4, end_time = $5,
+		status = $6, uuid_identity_executor = $7, result = $8, priority = $9, tags = $10,
+		updated_at = $11, started_at = $12, completed_at = $13
 		WHERE uuid_task = $14`
 
 	result, err := db.Exec(sqlStr,
@@ -484,7 +495,7 @@ func UpdateTaskHandler(c *gin.Context) {
 		now,
 		input.StartedAt,
 		input.CompletedAt,
-		input.UUIDTask,
+		taskUUID,
 	)
 
 	if err != nil {
@@ -503,9 +514,9 @@ func UpdateTaskHandler(c *gin.Context) {
 }
 
 func DeleteTaskHandler(c *gin.Context) {
-	taskUUID := c.Query("uuid")
+	taskUUID := c.Query("uuid_task")
 	if taskUUID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid_task is required"})
 		return
 	}
 
@@ -528,9 +539,9 @@ func DeleteTaskHandler(c *gin.Context) {
 }
 
 func GetTaskOperationsHandler(c *gin.Context) {
-	taskUUID := c.Query("uuid")
+	taskUUID := c.Query("uuid_task")
 	if taskUUID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid_task is required"})
 		return
 	}
 
@@ -565,9 +576,9 @@ func GetTaskOperationsHandler(c *gin.Context) {
 }
 
 func GetTaskCommentsHandler(c *gin.Context) {
-	taskUUID := c.Query("uuid")
+	taskUUID := c.Query("uuid_task")
 	if taskUUID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid_task is required"})
 		return
 	}
 
@@ -641,9 +652,9 @@ func AddTaskCommentHandler(c *gin.Context) {
 }
 
 func GetSubtasksHandler(c *gin.Context) {
-	taskUUID := c.Query("uuid")
+	taskUUID := c.Query("uuid_task")
 	if taskUUID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "uuid_task is required"})
 		return
 	}
 
