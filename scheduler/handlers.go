@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -301,20 +303,86 @@ func updateInstance(c *gin.Context) {
 		err = tx.Commit(ctx)
 	}()
 
-	// 更新实例
-	query := `
-		UPDATE scheduler_instances
-		SET name = $1, project_id = $2, template_id = $3, status = $4, 
-		    owner = $5, description = $6, startup_params = $7, data_uuid = $8, 
-		    result = $9, started_at = $10, completed_at = $11, updated_at = $12
-		WHERE id = $13
-	`
+	// 动态构建更新语句，只更新传入的字段
+	var setClauses []string
+	var args []interface{}
+	argIndex := 1
 
-	_, err = tx.Exec(ctx, query,
-		inst.Name, inst.ProjectID, inst.TemplateID, inst.Status,
-		inst.Owner, inst.Description, inst.StartupParams, inst.DataUUID,
-		inst.Result, inst.StartedAt, inst.CompletedAt, time.Now(), id,
-	)
+	if inst.Name != "" {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIndex))
+		args = append(args, inst.Name)
+		argIndex++
+	}
+
+	if inst.ProjectID != "" {
+		setClauses = append(setClauses, fmt.Sprintf("project_id = $%d", argIndex))
+		args = append(args, inst.ProjectID)
+		argIndex++
+	}
+
+	if inst.TemplateID != "" {
+		setClauses = append(setClauses, fmt.Sprintf("template_id = $%d", argIndex))
+		args = append(args, inst.TemplateID)
+		argIndex++
+	}
+
+	if inst.Status != "" {
+		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIndex))
+		args = append(args, inst.Status)
+		argIndex++
+	}
+
+	if inst.Owner != "" {
+		setClauses = append(setClauses, fmt.Sprintf("owner = $%d", argIndex))
+		args = append(args, inst.Owner)
+		argIndex++
+	}
+
+	if inst.Description != "" {
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argIndex))
+		args = append(args, inst.Description)
+		argIndex++
+	}
+
+	if len(inst.StartupParams) > 0 {
+		setClauses = append(setClauses, fmt.Sprintf("startup_params = $%d", argIndex))
+		args = append(args, inst.StartupParams)
+		argIndex++
+	}
+
+	if inst.DataUUID != "" {
+		setClauses = append(setClauses, fmt.Sprintf("data_uuid = $%d", argIndex))
+		args = append(args, inst.DataUUID)
+		argIndex++
+	}
+
+	if len(inst.Result) > 0 {
+		setClauses = append(setClauses, fmt.Sprintf("result = $%d", argIndex))
+		args = append(args, inst.Result)
+		argIndex++
+	}
+
+	if inst.StartedAt != nil {
+		setClauses = append(setClauses, fmt.Sprintf("started_at = $%d", argIndex))
+		args = append(args, inst.StartedAt)
+		argIndex++
+	}
+
+	if inst.CompletedAt != nil {
+		setClauses = append(setClauses, fmt.Sprintf("completed_at = $%d", argIndex))
+		args = append(args, inst.CompletedAt)
+		argIndex++
+	}
+
+	setClauses = append(setClauses, fmt.Sprintf("updated_at = $%d", argIndex))
+	args = append(args, time.Now())
+	argIndex++
+
+	args = append(args, id)
+
+	query := fmt.Sprintf("UPDATE scheduler_instances SET %s WHERE id = $%d", strings.Join(setClauses, ", "), argIndex)
+
+	_, err = tx.Exec(ctx, query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,
@@ -1050,21 +1118,98 @@ func updateNode(c *gin.Context) {
 		return
 	}
 
-	query := `
-		UPDATE scheduler_nodes
-		SET name = $1, type = $2, capability_id = $3, status = $4, 
-		    input = $5, output = $6, result = $7, properties = $8, 
-		    description = $9, sources = $10, position = $11, 
-		    started_at = $12, completed_at = $13, updated_at = $14
-		WHERE id = $15
-	`
+	// 动态构建更新语句，只更新传入的字段
+	var setClauses []string
+	var args []interface{}
+	argIndex := 1
 
-	_, err := dbPool.Exec(ctx, query,
-		node.Name, node.Type, node.CapabilityID, node.Status,
-		node.Input, node.Output, node.Result, node.Properties,
-		node.Description, node.Sources, node.Position,
-		node.StartedAt, node.CompletedAt, time.Now(), id,
-	)
+	if node.Name != "" {
+		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIndex))
+		args = append(args, node.Name)
+		argIndex++
+	}
+
+	if node.Type != "" {
+		setClauses = append(setClauses, fmt.Sprintf("type = $%d", argIndex))
+		args = append(args, node.Type)
+		argIndex++
+	}
+
+	if node.CapabilityID != "" {
+		setClauses = append(setClauses, fmt.Sprintf("capability_id = $%d", argIndex))
+		args = append(args, node.CapabilityID)
+		argIndex++
+	}
+
+	if node.Status != "" {
+		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIndex))
+		args = append(args, node.Status)
+		argIndex++
+	}
+
+	if len(node.Input) > 0 {
+		setClauses = append(setClauses, fmt.Sprintf("input = $%d", argIndex))
+		args = append(args, node.Input)
+		argIndex++
+	}
+
+	if len(node.Output) > 0 {
+		setClauses = append(setClauses, fmt.Sprintf("output = $%d", argIndex))
+		args = append(args, node.Output)
+		argIndex++
+	}
+
+	if len(node.Result) > 0 {
+		setClauses = append(setClauses, fmt.Sprintf("result = $%d", argIndex))
+		args = append(args, node.Result)
+		argIndex++
+	}
+
+	if len(node.Properties) > 0 {
+		setClauses = append(setClauses, fmt.Sprintf("properties = $%d", argIndex))
+		args = append(args, node.Properties)
+		argIndex++
+	}
+
+	if node.Description != "" {
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argIndex))
+		args = append(args, node.Description)
+		argIndex++
+	}
+
+	if len(node.Sources) > 0 {
+		setClauses = append(setClauses, fmt.Sprintf("sources = $%d", argIndex))
+		args = append(args, node.Sources)
+		argIndex++
+	}
+
+	if len(node.Position) > 0 {
+		setClauses = append(setClauses, fmt.Sprintf("position = $%d", argIndex))
+		args = append(args, node.Position)
+		argIndex++
+	}
+
+	if node.StartedAt != nil {
+		setClauses = append(setClauses, fmt.Sprintf("started_at = $%d", argIndex))
+		args = append(args, node.StartedAt)
+		argIndex++
+	}
+
+	if node.CompletedAt != nil {
+		setClauses = append(setClauses, fmt.Sprintf("completed_at = $%d", argIndex))
+		args = append(args, node.CompletedAt)
+		argIndex++
+	}
+
+	setClauses = append(setClauses, fmt.Sprintf("updated_at = $%d", argIndex))
+	args = append(args, time.Now())
+	argIndex++
+
+	args = append(args, id)
+
+	query := fmt.Sprintf("UPDATE scheduler_nodes SET %s WHERE id = $%d", strings.Join(setClauses, ", "), argIndex)
+
+	_, err := dbPool.Exec(ctx, query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,

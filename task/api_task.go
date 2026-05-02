@@ -475,28 +475,91 @@ func UpdateTaskHandler(c *gin.Context) {
 
 	now := time.Now()
 
-	sqlStr := `UPDATE task SET
-		description = $1, type = $2, uuid_agent = $3, start_time = $4, end_time = $5,
-		status = $6, uuid_identity_executor = $7, result = $8, priority = $9, tags = $10,
-		updated_at = $11, started_at = $12, completed_at = $13
-		WHERE uuid_task = $14`
+	var setClauses []string
+	var args []interface{}
+	argIndex := 1
 
-	result, err := db.Exec(sqlStr,
-		input.Description,
-		input.Type,
-		input.UUIDAgent,
-		input.StartTime,
-		input.EndTime,
-		input.Status,
-		input.UUIDIdentityExecutor,
-		input.Result,
-		input.Priority,
-		input.Tags,
-		now,
-		input.StartedAt,
-		input.CompletedAt,
-		taskUUID,
-	)
+	if input.Description != "" {
+		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argIndex))
+		args = append(args, input.Description)
+		argIndex++
+	}
+
+	if input.Type != "" {
+		setClauses = append(setClauses, fmt.Sprintf("type = $%d", argIndex))
+		args = append(args, input.Type)
+		argIndex++
+	}
+
+	if input.UUIDAgent != "" {
+		setClauses = append(setClauses, fmt.Sprintf("uuid_agent = $%d", argIndex))
+		args = append(args, input.UUIDAgent)
+		argIndex++
+	}
+
+	if input.StartTime != nil {
+		setClauses = append(setClauses, fmt.Sprintf("start_time = $%d", argIndex))
+		args = append(args, input.StartTime)
+		argIndex++
+	}
+
+	if input.EndTime != nil {
+		setClauses = append(setClauses, fmt.Sprintf("end_time = $%d", argIndex))
+		args = append(args, input.EndTime)
+		argIndex++
+	}
+
+	if input.Status != "" {
+		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIndex))
+		args = append(args, input.Status)
+		argIndex++
+	}
+
+	if input.UUIDIdentityExecutor != "" {
+		setClauses = append(setClauses, fmt.Sprintf("uuid_identity_executor = $%d", argIndex))
+		args = append(args, input.UUIDIdentityExecutor)
+		argIndex++
+	}
+
+	if input.Result != "" {
+		setClauses = append(setClauses, fmt.Sprintf("result = $%d", argIndex))
+		args = append(args, input.Result)
+		argIndex++
+	}
+
+	if input.Priority != 0 {
+		setClauses = append(setClauses, fmt.Sprintf("priority = $%d", argIndex))
+		args = append(args, input.Priority)
+		argIndex++
+	}
+
+	if input.Tags != "" {
+		setClauses = append(setClauses, fmt.Sprintf("tags = $%d", argIndex))
+		args = append(args, input.Tags)
+		argIndex++
+	}
+
+	if input.StartedAt != nil {
+		setClauses = append(setClauses, fmt.Sprintf("started_at = $%d", argIndex))
+		args = append(args, input.StartedAt)
+		argIndex++
+	}
+
+	if input.CompletedAt != nil {
+		setClauses = append(setClauses, fmt.Sprintf("completed_at = $%d", argIndex))
+		args = append(args, input.CompletedAt)
+		argIndex++
+	}
+
+	setClauses = append(setClauses, fmt.Sprintf("updated_at = $%d", argIndex))
+	args = append(args, now)
+	argIndex++
+
+	args = append(args, taskUUID)
+
+	sqlStr := fmt.Sprintf("UPDATE task SET %s WHERE uuid_task = $%d", strings.Join(setClauses, ", "), argIndex)
+
+	result, err := db.Exec(sqlStr, args...)
 
 	if err != nil {
 		log.Printf("Error updating task: %v", err)

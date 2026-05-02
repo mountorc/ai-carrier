@@ -525,7 +525,7 @@ func UpdateSkillHandler(c *gin.Context) {
 			nick = COALESCE(NULLIF($2, ''), nick),
 			description = COALESCE(NULLIF($3, ''), description),
 			author = COALESCE(NULLIF($4, ''), author),
-			type = COALESCE(NULLIF($5, ''), type),
+			"type" = COALESCE(NULLIF($5, ''), "type"),
 			download = COALESCE(NULLIF($6, ''), download),
 			updated_at = $7
 		WHERE uuid = $8 AND is_deleted = FALSE
