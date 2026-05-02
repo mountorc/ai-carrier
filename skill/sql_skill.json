@@ -60,6 +60,36 @@
       "name": "softDeleteSkill",
       "description": "软删除技能（标记为已删除）",
       "sql": "UPDATE skill_store_skills SET is_deleted = TRUE, deleted_at = $2 WHERE uuid = $1 AND is_deleted = FALSE RETURNING uuid"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440010",
+      "name": "getSkillByName",
+      "description": "根据名称获取技能（排除已删除）",
+      "sql": "SELECT uuid, name, nick, description, author, type, icon, download, tags, created_at, updated_at FROM skill_store_skills WHERE name = $1 AND is_deleted = FALSE"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440011",
+      "name": "listSkillVersions",
+      "description": "获取技能的所有版本列表",
+      "sql": "SELECT uuid, skill_uuid, version, download_url, file_name, file_size, release_notes, created_at, updated_at FROM skill_store_skill_versions WHERE skill_uuid = $1 ORDER BY created_at DESC"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440012",
+      "name": "getSkillVersion",
+      "description": "获取技能的特定版本",
+      "sql": "SELECT uuid, skill_uuid, version, download_url, file_name, file_size, release_notes, created_at, updated_at FROM skill_store_skill_versions WHERE skill_uuid = $1 AND version = $2"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440013",
+      "name": "insertSkillVersion",
+      "description": "插入新的技能版本",
+      "sql": "INSERT INTO skill_store_skill_versions (uuid, skill_uuid, version, download_url, file_name, file_size, release_notes, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING uuid"
+    },
+    {
+      "uuid": "330e8400-e29b-41d4-a716-446655440014",
+      "name": "getLatestSkillVersion",
+      "description": "获取技能的最新版本",
+      "sql": "SELECT uuid, skill_uuid, version, download_url, file_name, file_size, release_notes, created_at, updated_at FROM skill_store_skill_versions WHERE skill_uuid = $1 ORDER BY created_at DESC LIMIT 1"
     }
   ]
 }

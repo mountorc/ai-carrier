@@ -20,6 +20,7 @@ import (
 	"github.com/trae/autoFlow/carriercore/oss"
 	"github.com/trae/autoFlow/carriercore/scheduler"
 	"github.com/trae/autoFlow/carriercore/skill"
+	"github.com/trae/autoFlow/carriercore/sop"
 	"github.com/trae/autoFlow/carriercore/task"
 	workflowHandlers "github.com/trae/autoFlow/carriercore/workflow"
 	"github.com/trae/autoFlow/common/embedding"
@@ -107,6 +108,14 @@ func main() {
 		log.Println("Task module initialized successfully")
 	}
 
+	log.Println("Initializing SOP module...")
+	if err := sop.Init(); err != nil {
+		log.Printf("Warning: failed to initialize SOP: %v", err)
+	} else {
+		log.Println("SOP module initialized successfully")
+		defer sop.Close()
+	}
+
 	router := gin.Default()
 	apiregistry.SetupCORS(router)
 
@@ -115,6 +124,7 @@ func main() {
 	ability.RegisterRoutes(router)
 	scheduler.RegisterRoutes(router)
 	skill.RegisterRoutes(router)
+	sop.RegisterRoutes(router)
 	auth.RegisterRoutes(router)
 	oss.RegisterRoutes(router)
 	task.RegisterRoutes(router)

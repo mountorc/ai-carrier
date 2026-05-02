@@ -1,0 +1,30 @@
+{
+  "description": "SOP中心 API 配置文件 - 提供SOP列表、SOP详情、创建、更新、删除等SOP相关接口",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/sop/list",
+      "handler": "GetSOPListHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sop/get",
+      "handler": "GetSOPHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sop/create",
+      "handler": "CreateSOPHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sop/update",
+      "handler": "UpdateSOPHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sop/delete",
+      "handler": "DeleteSOPHandler"
+    }
+  ]
+}

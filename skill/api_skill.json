@@ -32,14 +32,24 @@
       "handler": "UpdateSkillHandler"
     },
     {
-      "method": "DELETE",
+      "method": "POST",
       "path": "/ability/skill/delete",
       "handler": "DeleteSkillHandler"
     },
     {
-      "method": "POST",
-      "path": "/ability/skill/delete",
-      "handler": "DeleteSkillHandler"
+      "method": "GET",
+      "path": "/ability/skill/version/list",
+      "handler": "ListSkillVersionsHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/ability/skill/version/get",
+      "handler": "GetSkillVersionHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/ability/skill/version/latest",
+      "handler": "GetLatestSkillVersionHandler"
     }
   ]
 }

@@ -1,0 +1,60 @@
+{
+  "description": "任务中心 API 配置文件 - 提供任务列表、任务详情、创建、更新、删除、评论、子任务等接口",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/task/create",
+      "handler": "CreateTaskHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/task/get",
+      "handler": "GetTaskHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/task/update",
+      "handler": "UpdateTaskHandler"
+    },
+    {
+      "method": "DELETE",
+      "path": "/task/delete",
+      "handler": "DeleteTaskHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/task/list",
+      "handler": "ListTasksHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/task/operations",
+      "handler": "GetTaskOperationsHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/task/comment/add",
+      "handler": "AddTaskCommentHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/task/comments",
+      "handler": "GetTaskCommentsHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/task/subtask/create",
+      "handler": "CreateSubtaskHandler"
+    },
+    {
+      "method": "GET",
+      "path": "/task/subtasks",
+      "handler": "GetSubtasksHandler"
+    },
+    {
+      "method": "POST",
+      "path": "/task/subtask/update",
+      "handler": "UpdateSubtaskHandler"
+    }
+  ]
+}

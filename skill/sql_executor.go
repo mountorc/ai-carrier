@@ -52,3 +52,25 @@ func SearchSkillsByVector(vectorText string) (*sql.QueryResult, error) {
 	}
 	return result, err
 }
+
+// Skill版本管理相关的函数
+
+func GetSkillByName(name string) (*sql.QueryResult, error) {
+	return sql.ExecuteSQLByUUID(context.Background(), "330e8400-e29b-41d4-a716-446655440010", []interface{}{name})
+}
+
+func ListSkillVersions(skillUUID string) (*sql.QueryResult, error) {
+	return sql.ExecuteSQLByUUID(context.Background(), "330e8400-e29b-41d4-a716-446655440011", []interface{}{skillUUID})
+}
+
+func GetSkillVersion(skillUUID string, version string) (*sql.QueryResult, error) {
+	return sql.ExecuteSQLByUUID(context.Background(), "330e8400-e29b-41d4-a716-446655440012", []interface{}{skillUUID, version})
+}
+
+func InsertSkillVersion(uuid string, skillUUID string, version string, downloadURL string, fileName string, fileSize int64, releaseNotes string, createdAt interface{}, updatedAt interface{}) (*sql.QueryResult, error) {
+	return sql.ExecuteSQLByUUID(context.Background(), "330e8400-e29b-41d4-a716-446655440013", []interface{}{uuid, skillUUID, version, downloadURL, fileName, fileSize, releaseNotes, createdAt, updatedAt})
+}
+
+func GetLatestSkillVersion(skillUUID string) (*sql.QueryResult, error) {
+	return sql.ExecuteSQLByUUID(context.Background(), "330e8400-e29b-41d4-a716-446655440014", []interface{}{skillUUID})
+}

@@ -1,7 +1,6 @@
 package skill
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,59 +11,79 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-
-	mountsql "github.com/trae/autoFlow/carriercore/mountcore/sql"
 	"github.com/trae/autoFlow/carriercore/oss"
 )
 
+type SkillListRequest struct {
+	Page     int `form:"page"`
+	PageSize int `form:"page_size"`
+}
+
+type SkillCreateRequest struct {
+	Name        string                 `json:"name" binding:"required"`
+	Nick        string                 `json:"nick"`
+	Version     string                 `json:"version"`
+	Description string                 `json:"description"`
+	Author      string                 `json:"author"`
+	Category    string                 `json:"category"`
+	Tags        []string               `json:"tags"`
+	Download    map[string]interface{} `json:"download"`
+}
+
+type SkillRegisterRequest struct {
+	Name        string   `json:"name" binding:"required"`
+	Version     string   `json:"version"`
+	Nick        string   `json:"nick"`
+	Description string   `json:"description"`
+	Author      string   `json:"author"`
+	Category    string   `json:"category"`
+	Tags        []string `json:"tags"`
+	FileURL     string   `json:"file_url"`
+	FileSize    int64    `json:"file_size"`
+	PackageName string   `json:"package_name"`
+}
+
+type SkillUpdateRequest struct {
+	UUID        string                 `json:"uuid" binding:"required"`
+	Name        string                 `json:"name"`
+	Nick        string                 `json:"nick"`
+	Description string                 `json:"description"`
+	Author      string                 `json:"author"`
+	Category    string                 `json:"category"`
+	Tags        []string               `json:"tags"`
+	Download    map[string]interface{} `json:"download"`
+}
+
+type SkillUploadRequest struct {
+	Name         string `form:"name" binding:"required"`
+	Version      string `form:"version" binding:"required"`
+	Description  string `form:"description"`
+	Author       string `form:"author"`
+	Category     string `form:"category"`
+	Tags         string `form:"tags"`
+	ReleaseNotes string `form:"release_notes"`
+}
+
 func GetSkillListHandler(c *gin.Context) {
-	log.Println("Getting skill list from database...")
-
-	carrierAgentUUID := c.Query("carrier_agent_uuid")
-	if carrierAgentUUID != "" {
-		valid, message := validateAgentUUID(carrierAgentUUID)
-		if !valid {
-			c.JSON(http.StatusUnauthorized, Response{
-				Success: false,
-				Message: message,
-			})
-			return
-		}
-		log.Printf("Agent validated: %s", message)
+	var req SkillListRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		log.Printf("Error parsing skill list request: %v", err)
 	}
 
-	queryText := c.Query("query")
-	vectorText := c.Query("vectorText")
-
-	var result *mountsql.QueryResult
-	var err error
-
-	if queryText != "" || vectorText != "" {
-		searchText := queryText
-		if vectorText != "" {
-			searchText = vectorText
-		}
-
-		log.Printf("Performing vector search for: %s", searchText)
-
-		result, err = SearchSkillsByVector(searchText)
-	} else {
-		result, err = GetSkillList()
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 {
+		req.PageSize = 20
 	}
 
+	result, err := GetSkillList()
 	if err != nil {
 		log.Printf("Error getting skill list: %v", err)
-		if strings.Contains(err.Error(), "executor not initialized") || strings.Contains(err.Error(), "embedding service") {
-			c.JSON(http.StatusServiceUnavailable, Response{
-				Success: false,
-				Message: "Database connection not available. Skill service is temporarily unavailable.",
-			})
-		} else {
-			c.JSON(http.StatusInternalServerError, Response{
-				Success: false,
-				Message: fmt.Sprintf("Failed to get skills: %v", err),
-			})
-		}
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to get skill list: %v", err),
+		})
 		return
 	}
 
@@ -76,122 +95,38 @@ func GetSkillListHandler(c *gin.Context) {
 }
 
 func getSkillHandler(c *gin.Context) {
-	carrierAgentUUID := c.Query("carrier_agent_uuid")
-	if carrierAgentUUID != "" {
-		valid, message := validateAgentUUID(carrierAgentUUID)
-		if !valid {
-			c.JSON(http.StatusUnauthorized, Response{
-				Success: false,
-				Message: message,
-			})
-			return
-		}
-		log.Printf("Agent validated: %s", message)
+	uuid := c.Query("uuid")
+	if uuid == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "Skill UUID is required",
+		})
+		return
 	}
 
-	skillUUID := c.Query("uuid")
-	if skillUUID == "" {
-		skillUUID = c.Query("id")
-		if skillUUID == "" {
-			c.JSON(http.StatusBadRequest, Response{
-				Success: false,
-				Message: "Missing required parameter: uuid or id",
-			})
-			return
-		}
-	}
-
-	log.Printf("Getting skill with UUID: %s", skillUUID)
-
-	result, err := GetSkillByUUID(skillUUID)
+	result, err := GetSkillByUUID(uuid)
 	if err != nil {
-		log.Printf("Error querying skill: %v", err)
-		if strings.Contains(err.Error(), "未找到 UUID") {
-			c.JSON(http.StatusNotFound, Response{
-				Success: false,
-				Message: fmt.Sprintf("Skill with UUID %s not found", skillUUID),
-			})
-		} else {
-			c.JSON(http.StatusInternalServerError, Response{
-				Success: false,
-				Message: fmt.Sprintf("Failed to get skill: %v", err),
-			})
-		}
+		log.Printf("Error getting skill: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to get skill: %v", err),
+		})
 		return
 	}
 
 	if result.Count == 0 {
 		c.JSON(http.StatusNotFound, Response{
 			Success: false,
-			Message: fmt.Sprintf("Skill with UUID %s not found", skillUUID),
+			Message: fmt.Sprintf("Skill not found: %s", uuid),
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, Response{
 		Success: true,
-		Message: "Skill retrieved successfully",
+		Message: "Skill found",
 		Data:    result.Rows[0],
 	})
-}
-
-func validateAgentUUID(uuid string) (bool, string) {
-	if uuid == "" {
-		return false, "Agent UUID is empty"
-	}
-
-	if len(uuid) < 32 {
-		return false, "Invalid agent UUID format"
-	}
-
-	return true, "Agent UUID validated successfully"
-}
-
-func insertApiLog(action, path, method string, status int, message, requestBody, responseBody, identityToken, carrierUserID, carrierAgentUUID, clientIP string) {
-	log.Printf("[API Log] Action: %s, Path: %s, Method: %s, Status: %d, Message: %s",
-		action, path, method, status, message)
-}
-
-type SkillCreateRequest struct {
-	Name        string                 `json:"name"`
-	Nick        string                 `json:"nick,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Download    map[string]interface{} `json:"download,omitempty"`
-}
-
-type SkillUpdateRequest struct {
-	UUID        string                 `json:"uuid"`
-	Name        string                 `json:"name,omitempty"`
-	Nick        string                 `json:"nick,omitempty"`
-	Description string                 `json:"description,omitempty"`
-	Download    map[string]interface{} `json:"download,omitempty"`
-}
-
-type SkillDeleteRequest struct {
-	UUID string `json:"uuid"`
-}
-
-type SkillRegisterRequest struct {
-	Name        string      `json:"name"`
-	Version     string      `json:"version"`
-	Description string      `json:"description,omitempty"`
-	Author      string      `json:"author,omitempty"`
-	Category    string      `json:"category,omitempty"`
-	Tags        []string    `json:"tags,omitempty"`
-	FileURL     string      `json:"file_url,omitempty"`
-	FileSize    int64       `json:"file_size,omitempty"`
-	PackageName string      `json:"package_name,omitempty"`
-	SkillPath   string      `json:"skill_path,omitempty"`
-	Metadata    interface{} `json:"metadata,omitempty"`
-}
-
-type SkillUploadRequest struct {
-	Name        string `form:"name" binding:"required"`
-	Version     string `form:"version"`
-	Description string `form:"description"`
-	Author      string `form:"author"`
-	Category    string `form:"category"`
-	Tags        string `form:"tags"`
 }
 
 func CreateSkillHandler(c *gin.Context) {
@@ -346,6 +281,14 @@ func UploadSkillHandler(c *gin.Context) {
 		return
 	}
 
+	if req.Version == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "Skill version is required",
+		})
+		return
+	}
+
 	file, handler, err := c.Request.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{
@@ -356,8 +299,12 @@ func UploadSkillHandler(c *gin.Context) {
 	}
 	defer file.Close()
 
-	fileName := handler.Filename
-	log.Printf("Uploading skill package: %s", fileName)
+	fileExt := ""
+	if idx := lastDotIndex(handler.Filename); idx != -1 {
+		fileExt = handler.Filename[idx:]
+	}
+	formattedFileName := fmt.Sprintf("%s_%s%s", sanitizeFileName(req.Name), sanitizeFileName(req.Version), fileExt)
+	log.Printf("Uploading skill package with formatted name: %s", formattedFileName)
 
 	ossClient := oss.GetInstance()
 	if ossClient == nil {
@@ -392,6 +339,19 @@ func UploadSkillHandler(c *gin.Context) {
 		}
 	}
 
+	existingFiles, err := ossClient.ListFilesByToken(token, basePath)
+	if err == nil && existingFiles != nil {
+		for _, fileInfo := range existingFiles {
+			if fileName, ok := fileInfo["name"].(string); ok && fileName == formattedFileName {
+				c.JSON(http.StatusConflict, Response{
+					Success: false,
+					Message: fmt.Sprintf("File %s already exists in OSS. Please use a different version.", formattedFileName),
+				})
+				return
+			}
+		}
+	}
+
 	fileContent, err := io.ReadAll(file)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
@@ -401,7 +361,7 @@ func UploadSkillHandler(c *gin.Context) {
 		return
 	}
 
-	fileUrl, err := ossClient.UploadByToken(token, fileName, fileContent)
+	fileUrl, err := ossClient.UploadByToken(token, formattedFileName, fileContent)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,
@@ -412,12 +372,7 @@ func UploadSkillHandler(c *gin.Context) {
 
 	log.Printf("File uploaded to OSS: %s", fileUrl)
 
-	skillUUID := uuid.New().String()
 	now := time.Now()
-
-	if req.Version == "" {
-		req.Version = "1.0.0"
-	}
 	if req.Category == "" {
 		req.Category = "general"
 	}
@@ -435,45 +390,108 @@ func UploadSkillHandler(c *gin.Context) {
 		tagsJSON = "[]"
 	}
 
-	downloadData := map[string]interface{}{
-		"url":     fileUrl,
-		"size":    len(fileContent),
-		"package": fileName,
+	skillUUID := ""
+	existingSkillResult, err := GetSkillByName(req.Name)
+
+	if err == nil && existingSkillResult != nil && existingSkillResult.Count > 0 {
+		skillRow := existingSkillResult.Rows[0]
+		if uuidVal, ok := skillRow["uuid"].(string); ok && uuidVal != "" {
+			skillUUID = uuidVal
+			log.Printf("Existing skill found, reusing UUID: %s", skillUUID)
+		} else {
+			skillUUID = uuid.New().String()
+		}
+	} else {
+		skillUUID = uuid.New().String()
+		downloadData := map[string]interface{}{
+			"url":     fileUrl,
+			"size":    int64(len(fileContent)),
+			"package": formattedFileName,
+			"version": req.Version,
+		}
+		downloadBytes, _ := json.Marshal(downloadData)
+		downloadJSON := string(downloadBytes)
+
+		var resultUUID string
+		err = pgDB.QueryRow(`
+			INSERT INTO skill_store_skills (uuid, name, nick, description, author, type, download, tags, created_at, updated_at, is_deleted)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, FALSE)
+			RETURNING uuid`,
+			skillUUID, req.Name, req.Category, req.Description, req.Author, req.Category, downloadJSON, tagsJSON, now, now).Scan(&resultUUID)
+
+		if err != nil {
+			log.Printf("Error creating new skill: %v", err)
+			c.JSON(http.StatusInternalServerError, Response{
+				Success: false,
+				Message: fmt.Sprintf("Failed to create skill in database: %v", err),
+			})
+			return
+		}
+
+		log.Printf("New skill created successfully: %s", resultUUID)
 	}
-	downloadBytes, _ := json.Marshal(downloadData)
-	downloadJSON := string(downloadBytes)
 
-	var resultUUID string
-	err = pgDB.QueryRow(`
-		INSERT INTO skill_store_skills (uuid, name, nick, description, author, type, download, tags, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		RETURNING uuid`,
-		skillUUID, req.Name, req.Category, req.Description, req.Author, req.Category, downloadJSON, tagsJSON, now, now).Scan(&resultUUID)
-
-	if err != nil {
-		log.Printf("Error registering skill after OSS upload: %v", err)
-		c.JSON(http.StatusInternalServerError, Response{
+	existingVersionResult, err := GetSkillVersion(skillUUID, req.Version)
+	if err == nil && existingVersionResult != nil && existingVersionResult.Count > 0 {
+		c.JSON(http.StatusConflict, Response{
 			Success: false,
-			Message: fmt.Sprintf("Failed to register skill in database: %v", err),
+			Message: fmt.Sprintf("Skill version %s already exists. Please use a different version number.", req.Version),
 		})
 		return
 	}
 
-	log.Printf("Skill uploaded and registered successfully: %s", resultUUID)
+	skillVersionUUID := uuid.New().String()
+	var versionResultUUID string
+	err = pgDB.QueryRow(`
+		INSERT INTO skill_store_skill_versions (uuid, skill_uuid, version, download_url, file_name, file_size, release_notes, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING uuid`,
+		skillVersionUUID, skillUUID, req.Version, fileUrl, formattedFileName, int64(len(fileContent)), req.ReleaseNotes, now, now).Scan(&versionResultUUID)
+
+	if err != nil {
+		log.Printf("Error creating skill version record: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to create skill version in database: %v", err),
+		})
+		return
+	}
+
+	log.Printf("Skill version record created: %s", versionResultUUID)
 
 	c.JSON(http.StatusOK, Response{
 		Success: true,
-		Message: "Skill uploaded and registered successfully",
+		Message: "Skill uploaded and version tracked successfully",
 		Data: map[string]interface{}{
-			"uuid":         resultUUID,
-			"name":         req.Name,
-			"version":      req.Version,
-			"author":       req.Author,
-			"file_url":     fileUrl,
-			"package_name": fileName,
-			"file_size":    len(fileContent),
+			"uuid":          skillUUID,
+			"version_uuid":  skillVersionUUID,
+			"name":          req.Name,
+			"version":       req.Version,
+			"author":        req.Author,
+			"file_url":      fileUrl,
+			"file_name":     formattedFileName,
+			"file_size":     int64(len(fileContent)),
+			"release_notes": req.ReleaseNotes,
 		},
 	})
+}
+
+func lastDotIndex(s string) int {
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '.' {
+			return i
+		}
+	}
+	return -1
+}
+
+func sanitizeFileName(name string) string {
+	result := strings.ReplaceAll(name, " ", "_")
+	specialChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|"}
+	for _, char := range specialChars {
+		result = strings.ReplaceAll(result, char, "_")
+	}
+	return result
 }
 
 func UpdateSkillHandler(c *gin.Context) {
@@ -502,23 +520,17 @@ func UpdateSkillHandler(c *gin.Context) {
 
 	var resultUUID string
 	err := pgDB.QueryRow(`
-		UPDATE skill_store_skills 
-		SET name = COALESCE($1, name), 
-			nick = COALESCE($2, nick), 
-			description = COALESCE($3, description), 
-			download = COALESCE($4, download), 
-			updated_at = $5 
-		WHERE uuid = $6
+		UPDATE skill_store_skills
+		SET name = COALESCE(NULLIF($1, ''), name),
+			nick = COALESCE(NULLIF($2, ''), nick),
+			description = COALESCE(NULLIF($3, ''), description),
+			author = COALESCE(NULLIF($4, ''), author),
+			type = COALESCE(NULLIF($5, ''), type),
+			download = COALESCE(NULLIF($6, ''), download),
+			updated_at = $7
+		WHERE uuid = $8 AND is_deleted = FALSE
 		RETURNING uuid`,
-		req.Name, req.Nick, req.Description, downloadJSON, time.Now(), req.UUID).Scan(&resultUUID)
-
-	if err == sql.ErrNoRows {
-		c.JSON(http.StatusNotFound, Response{
-			Success: false,
-			Message: fmt.Sprintf("Skill with UUID %s not found", req.UUID),
-		})
-		return
-	}
+		req.Name, req.Nick, req.Description, req.Author, req.Category, downloadJSON, time.Now(), req.UUID).Scan(&resultUUID)
 
 	if err != nil {
 		log.Printf("Error updating skill: %v", err)
@@ -536,14 +548,16 @@ func UpdateSkillHandler(c *gin.Context) {
 		Message: "Skill updated successfully",
 		Data: map[string]interface{}{
 			"uuid": resultUUID,
+			"name": req.Name,
 		},
 	})
 }
 
 func DeleteSkillHandler(c *gin.Context) {
-	var req SkillDeleteRequest
+	var req struct {
+		UUID string `json:"uuid" binding:"required"`
+	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("Error parsing delete skill request: %v", err)
 		c.JSON(http.StatusBadRequest, Response{
 			Success: false,
 			Message: fmt.Sprintf("Invalid request body: %v", err),
@@ -559,24 +573,15 @@ func DeleteSkillHandler(c *gin.Context) {
 		return
 	}
 
+	now := time.Now()
+
 	var resultUUID string
 	err := pgDB.QueryRow(`
-		UPDATE skill_store_skills 
-		SET is_deleted = TRUE, deleted_at = $2 
-		WHERE uuid = $1 AND is_deleted = FALSE
-		RETURNING uuid`,
-		req.UUID, time.Now()).Scan(&resultUUID)
-
-	if err == sql.ErrNoRows {
-		c.JSON(http.StatusNotFound, Response{
-			Success: false,
-			Message: fmt.Sprintf("Skill with UUID %s not found or already deleted", req.UUID),
-		})
-		return
-	}
+		UPDATE skill_store_skills SET is_deleted = TRUE, deleted_at = $2 WHERE uuid = $1 AND is_deleted = FALSE RETURNING uuid`,
+		req.UUID, now).Scan(&resultUUID)
 
 	if err != nil {
-		log.Printf("Error deleting skill: %v", err)
+		log.Printf("Error soft deleting skill: %v", err)
 		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,
 			Message: fmt.Sprintf("Failed to delete skill: %v", err),
@@ -589,5 +594,104 @@ func DeleteSkillHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		Success: true,
 		Message: "Skill deleted successfully",
+	})
+}
+
+func ListSkillVersionsHandler(c *gin.Context) {
+	skillUUID := c.Query("skill_uuid")
+	if skillUUID == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "Skill UUID is required",
+		})
+		return
+	}
+
+	result, err := ListSkillVersions(skillUUID)
+	if err != nil {
+		log.Printf("Error listing skill versions: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to list skill versions: %v", err),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: fmt.Sprintf("Found %d versions", result.Count),
+		Data:    result.Rows,
+	})
+}
+
+func GetSkillVersionHandler(c *gin.Context) {
+	skillUUID := c.Query("skill_uuid")
+	version := c.Query("version")
+
+	if skillUUID == "" || version == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "Skill UUID and version are required",
+		})
+		return
+	}
+
+	result, err := GetSkillVersion(skillUUID, version)
+	if err != nil {
+		log.Printf("Error getting skill version: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to get skill version: %v", err),
+		})
+		return
+	}
+
+	if result.Count == 0 {
+		c.JSON(http.StatusNotFound, Response{
+			Success: false,
+			Message: fmt.Sprintf("Skill version not found for skill %s and version %s", skillUUID, version),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Skill version found",
+		Data:    result.Rows[0],
+	})
+}
+
+func GetLatestSkillVersionHandler(c *gin.Context) {
+	skillUUID := c.Query("skill_uuid")
+	if skillUUID == "" {
+		c.JSON(http.StatusBadRequest, Response{
+			Success: false,
+			Message: "Skill UUID is required",
+		})
+		return
+	}
+
+	result, err := GetLatestSkillVersion(skillUUID)
+	if err != nil {
+		log.Printf("Error getting latest skill version: %v", err)
+		c.JSON(http.StatusInternalServerError, Response{
+			Success: false,
+			Message: fmt.Sprintf("Failed to get latest skill version: %v", err),
+		})
+		return
+	}
+
+	if result.Count == 0 {
+		c.JSON(http.StatusNotFound, Response{
+			Success: false,
+			Message: fmt.Sprintf("No versions found for skill %s", skillUUID),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		Success: true,
+		Message: "Latest skill version found",
+		Data:    result.Rows[0],
 	})
 }
