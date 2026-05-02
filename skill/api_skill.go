@@ -77,13 +77,16 @@ var apiSkillData []byte
 
 func getHandlerMap() map[string]gin.HandlerFunc {
 	return map[string]gin.HandlerFunc{
-		"GetSkillListHandler":   GetSkillListHandler,
-		"getSkillHandler":      getSkillHandler,
-		"CreateSkillHandler":   CreateSkillHandler,
-		"RegisterSkillHandler": RegisterSkillHandler,
-		"UploadSkillHandler":   UploadSkillHandler,
-		"UpdateSkillHandler":   UpdateSkillHandler,
-		"DeleteSkillHandler":   DeleteSkillHandler,
+		"GetSkillListHandler":          GetSkillListHandler,
+		"getSkillHandler":              getSkillHandler,
+		"CreateSkillHandler":           CreateSkillHandler,
+		"RegisterSkillHandler":         RegisterSkillHandler,
+		"UploadSkillHandler":           UploadSkillHandler,
+		"UpdateSkillHandler":           UpdateSkillHandler,
+		"DeleteSkillHandler":           DeleteSkillHandler,
+		"ListSkillVersionsHandler":     ListSkillVersionsHandler,
+		"GetSkillVersionHandler":       GetSkillVersionHandler,
+		"GetLatestSkillVersionHandler": GetLatestSkillVersionHandler,
 	}
 }
 

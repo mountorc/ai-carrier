@@ -4,8 +4,8 @@
     {
       "uuid": "330e8400-e22b-41d4-a716-446655440001",
       "name": "listSkills",
-      "description": "获取技能列表，按创建时间倒序排列（排除已删除）",
-      "sql": "SELECT uuid, name, nick, description, author, type, icon, download, tags, created_at, updated_at FROM skill_store_skills WHERE is_deleted = FALSE ORDER BY created_at DESC",
+      "description": "获取技能列表及最新版本信息，按创建时间倒序排列（排除已删除）",
+      "sql": "SELECT s.uuid, s.name, s.nick, s.description, s.author, s.type, s.icon, s.download, s.tags, s.created_at, s.updated_at, v.version as latest_version, v.download_url as latest_download_url, v.file_name as latest_file_name, v.file_size as latest_file_size FROM skill_store_skills s LEFT JOIN skill_store_skill_versions v ON s.uuid = v.skill_uuid AND v.created_at = (SELECT MAX(created_at) FROM skill_store_skill_versions WHERE skill_uuid = s.uuid) WHERE s.is_deleted = FALSE ORDER BY s.created_at DESC",
       "whereSet":{
         "vectorText":{
           "type":"vector",
