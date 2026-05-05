@@ -2,6 +2,7 @@ package sop
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -69,12 +70,16 @@ func GetSOPHandler(c *gin.Context) {
 }
 
 type SOPCreateRequest struct {
-	Name        string `json:"name"`
-	Nick        string `json:"nick,omitempty"`
-	Description string `json:"description,omitempty"`
-	Content     string `json:"content,omitempty"`
-	Category    string `json:"category,omitempty"`
-	Tags        string `json:"tags,omitempty"`
+	Name        string          `json:"name"`
+	Nick        string          `json:"nick,omitempty"`
+	Description string          `json:"description,omitempty"`
+	Content     string          `json:"content,omitempty"`
+	Config      json.RawMessage `json:"config,omitempty"`
+	Category    string          `json:"category,omitempty"`
+	Tags        string          `json:"tags,omitempty"`
+	Status      string          `json:"status,omitempty"`
+	Version     string          `json:"version,omitempty"`
+	Project     string          `json:"project,omitempty"`
 }
 
 func CreateSOPHandler(c *gin.Context) {
@@ -106,12 +111,24 @@ func CreateSOPHandler(c *gin.Context) {
 		tagsJSON = "[]"
 	}
 
+	if req.Status == "" {
+		req.Status = "draft"
+	}
+	if req.Version == "" {
+		req.Version = "1.0"
+	}
+
+	configBytes := []byte("{}")
+	if req.Config != nil {
+		configBytes = req.Config
+	}
+
 	var resultUUID string
 	err := pgDB.QueryRow(`
-		INSERT INTO sops (uuid, name, nick, description, content, category, tags, created_at, updated_at, is_deleted)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE)
+		INSERT INTO sops (uuid, name, nick, description, content, config, category, tags, status, version, project, created_at, updated_at, is_deleted)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $12, $13, FALSE)
 		RETURNING uuid`,
-		sopUUID, req.Name, req.Nick, req.Description, req.Content, req.Category, tagsJSON, now, now).Scan(&resultUUID)
+		sopUUID, req.Name, req.Nick, req.Description, req.Content, configBytes, req.Category, tagsJSON, req.Status, req.Version, req.Project, now, now).Scan(&resultUUID)
 
 	if err != nil {
 		log.Printf("Error inserting SOP: %v", err)
@@ -135,13 +152,17 @@ func CreateSOPHandler(c *gin.Context) {
 }
 
 type SOPUpdateRequest struct {
-	UUID        string `json:"uuid"`
-	Name        string `json:"name,omitempty"`
-	Nick        string `json:"nick,omitempty"`
-	Description string `json:"description,omitempty"`
-	Content     string `json:"content,omitempty"`
-	Category    string `json:"category,omitempty"`
-	Tags        string `json:"tags,omitempty"`
+	UUID        string          `json:"uuid"`
+	Name        string          `json:"name,omitempty"`
+	Nick        string          `json:"nick,omitempty"`
+	Description string          `json:"description,omitempty"`
+	Content     string          `json:"content,omitempty"`
+	Config      json.RawMessage `json:"config,omitempty"`
+	Category    string          `json:"category,omitempty"`
+	Tags        string          `json:"tags,omitempty"`
+	Status      string          `json:"status,omitempty"`
+	Version     string          `json:"version,omitempty"`
+	Project     string          `json:"project,omitempty"`
 }
 
 func UpdateSOPHandler(c *gin.Context) {
@@ -175,12 +196,16 @@ func UpdateSOPHandler(c *gin.Context) {
 			nick = COALESCE(NULLIF($2, ''), nick),
 			description = COALESCE(NULLIF($3, ''), description),
 			content = COALESCE(NULLIF($4, ''), content),
-			category = COALESCE(NULLIF($5, ''), category),
-			tags = COALESCE(NULLIF($6, ''), tags),
-			updated_at = $7
-		WHERE uuid = $8 AND is_deleted = FALSE
+			config = COALESCE($5::jsonb, config),
+			category = COALESCE(NULLIF($6, ''), category),
+			tags = COALESCE(NULLIF($7, ''), tags),
+			status = COALESCE(NULLIF($8, ''), status),
+			version = COALESCE(NULLIF($9, ''), version),
+			project = $10,
+			updated_at = $11
+		WHERE uuid = $12 AND is_deleted = FALSE
 		RETURNING uuid`,
-		req.Name, req.Nick, req.Description, req.Content, req.Category, tagsJSON, time.Now(), req.UUID).Scan(&resultUUID)
+		req.Name, req.Nick, req.Description, req.Content, req.Config, req.Category, tagsJSON, req.Status, req.Version, req.Project, time.Now(), req.UUID).Scan(&resultUUID)
 
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, Response{

@@ -18,6 +18,8 @@ import (
 	"github.com/trae/autoFlow/carriercore/auth"
 	"github.com/trae/autoFlow/carriercore/mountcore/sql"
 	"github.com/trae/autoFlow/carriercore/oss"
+	"github.com/trae/autoFlow/carriercore/project"
+	"github.com/trae/autoFlow/carriercore/role"
 	"github.com/trae/autoFlow/carriercore/scheduler"
 	"github.com/trae/autoFlow/carriercore/skill"
 	"github.com/trae/autoFlow/carriercore/sop"
@@ -108,12 +110,28 @@ func main() {
 		log.Println("Task module initialized successfully")
 	}
 
+	log.Println("Initializing Role module...")
+	if err := role.Init(); err != nil {
+		log.Printf("Warning: failed to initialize Role: %v", err)
+	} else {
+		log.Println("Role module initialized successfully")
+		defer role.Close()
+	}
+
 	log.Println("Initializing SOP module...")
 	if err := sop.Init(); err != nil {
 		log.Printf("Warning: failed to initialize SOP: %v", err)
 	} else {
 		log.Println("SOP module initialized successfully")
 		defer sop.Close()
+	}
+
+	log.Println("Initializing Project module...")
+	projectHandler, err := project.NewProjectHandler("../services/ability/data/project.json")
+	if err != nil {
+		log.Printf("Warning: failed to initialize Project: %v", err)
+	} else {
+		log.Println("Project module initialized successfully")
 	}
 
 	router := gin.Default()
@@ -124,11 +142,24 @@ func main() {
 	ability.RegisterRoutes(router)
 	scheduler.RegisterRoutes(router)
 	skill.RegisterRoutes(router)
+	role.RegisterRoutes(router)
 	sop.RegisterRoutes(router)
 	auth.RegisterRoutes(router)
 	oss.RegisterRoutes(router)
 	task.RegisterRoutes(router)
 	registerMountSQLRoutes(router)
+
+	if projectHandler != nil {
+		projectAPI := router.Group("/project")
+		projectAPI.GET("/list", projectHandler.ListProjects)
+		projectAPI.GET("/:uuid", projectHandler.GetProject)
+		projectAPI.POST("", projectHandler.CreateProject)
+		projectAPI.PUT("/:uuid", projectHandler.UpdateProject)
+		projectAPI.DELETE("/:uuid", projectHandler.DeleteProject)
+		projectAPI.PUT("/:uuid/toggle", projectHandler.ToggleProject)
+		projectAPI.POST("/validate", projectHandler.ValidateProjectAPI)
+		log.Println("Project routes registered successfully")
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
