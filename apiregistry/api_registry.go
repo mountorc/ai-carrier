@@ -29,24 +29,24 @@ type APIConfig struct {
 
 // RegisterRoutesFromJSON 从JSON文件注册路由
 // 参数:
-// - router: Gin路由器实例
+// - router: Gin路由器实例（支持 *gin.Engine 或 gin.RouterGroup）
 // - configFile: JSON配置文件路径
 // - handlerMap: 处理器函数映射
 // 返回:
 // - error: 注册过程中的错误
-func RegisterRoutesFromJSON(router *gin.Engine, configFile string, handlerMap map[string]gin.HandlerFunc) error {
+func RegisterRoutesFromJSON(router gin.IRouter, configFile string, handlerMap map[string]gin.HandlerFunc) error {
 	return RegisterRoutesFromJSONData(router, []byte{}, configFile, handlerMap)
 }
 
 // RegisterRoutesFromJSONData 从JSON数据注册路由
 // 参数:
-// - router: Gin路由器实例
+// - router: Gin路由器实例（支持 *gin.Engine 或 gin.RouterGroup）
 // - embeddedData: 嵌入式JSON数据
 // - configFile: JSON配置文件路径（用于日志和错误信息）
 // - handlerMap: 处理器函数映射
 // 返回:
 // - error: 注册过程中的错误
-func RegisterRoutesFromJSONData(router *gin.Engine, embeddedData []byte, configFile string, handlerMap map[string]gin.HandlerFunc) error {
+func RegisterRoutesFromJSONData(router gin.IRouter, embeddedData []byte, configFile string, handlerMap map[string]gin.HandlerFunc) error {
 	var data []byte
 	var err error
 

@@ -13,20 +13,20 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/trae/autoFlow/carriercore/ability"
-	"github.com/trae/autoFlow/carriercore/apiregistry"
-	"github.com/trae/autoFlow/carriercore/auth"
-	"github.com/trae/autoFlow/carriercore/mountcore/sql"
-	"github.com/trae/autoFlow/carriercore/oss"
-	"github.com/trae/autoFlow/carriercore/project"
-	"github.com/trae/autoFlow/carriercore/role"
-	"github.com/trae/autoFlow/carriercore/scheduler"
-	"github.com/trae/autoFlow/carriercore/skill"
-	"github.com/trae/autoFlow/carriercore/sop"
-	"github.com/trae/autoFlow/carriercore/task"
-	workflowHandlers "github.com/trae/autoFlow/carriercore/workflow"
-	"github.com/trae/autoFlow/common/embedding"
-	"github.com/trae/autoFlow/mounts/skills"
+	"github.com/xmzail/ai-carrier-dev/carriercore/ability"
+	"github.com/xmzail/ai-carrier-dev/carriercore/apiregistry"
+	"github.com/xmzail/ai-carrier-dev/carriercore/auth"
+	"github.com/xmzail/ai-carrier-dev/carriercore/mountcore/sql"
+	"github.com/xmzail/ai-carrier-dev/carriercore/oss"
+	"github.com/xmzail/ai-carrier-dev/carriercore/project"
+	"github.com/xmzail/ai-carrier-dev/carriercore/role"
+	"github.com/xmzail/ai-carrier-dev/carriercore/scheduler"
+	"github.com/xmzail/ai-carrier-dev/carriercore/skill"
+	"github.com/xmzail/ai-carrier-dev/carriercore/sop"
+	"github.com/xmzail/ai-carrier-dev/carriercore/task"
+	workflowHandlers "github.com/xmzail/ai-carrier-dev/carriercore/workflow"
+	"github.com/xmzail/ai-carrier-dev/common/embedding"
+	"github.com/xmzail/ai-carrier-dev/mounts/skills"
 )
 
 func main() {
@@ -51,25 +51,25 @@ func main() {
 	log.Println("Initializing Workflow module...")
 	log.Println("Workflow module initialized successfully")
 
+	log.Println("Initializing Database with MountCore SQL Executor...")
+	executor, err := sql.NewExecutorFromConfig("./mount_config.json")
+	if err != nil {
+		log.Printf("Warning: failed to initialize SQL executor: %v", err)
+	} else {
+		log.Println("MountCore SQL Executor initialized successfully")
+		if embeddingService != nil {
+			executor.SetEmbeddingService(embeddingService)
+			log.Println("Embedding service set in SQL executor")
+		}
+		defer executor.Close()
+	}
+
 	log.Println("Initializing Ability module...")
 	if err := ability.Init(); err != nil {
 		log.Printf("Warning: failed to initialize Ability: %v", err)
 	} else {
 		log.Println("Ability module initialized successfully")
 		defer ability.Close()
-
-		log.Println("Initializing Database with MountCore SQL Executor...")
-		executor, err := sql.NewExecutorFromConfig("./mount_config.json")
-		if err != nil {
-			log.Printf("Warning: failed to initialize SQL executor: %v", err)
-		} else {
-			log.Println("MountCore SQL Executor initialized successfully")
-			if embeddingService != nil {
-				executor.SetEmbeddingService(embeddingService)
-				log.Println("Embedding service set in SQL executor")
-			}
-			defer executor.Close()
-		}
 	}
 
 	log.Println("Initializing Scheduler module...")
@@ -138,16 +138,25 @@ func main() {
 	apiregistry.SetupCORS(router)
 
 	log.Println("Registering routes...")
-	workflowHandlers.RegisterRoutes(router)
-	ability.RegisterRoutes(router)
-	scheduler.RegisterRoutes(router)
-	skill.RegisterRoutes(router)
-	role.RegisterRoutes(router)
-	sop.RegisterRoutes(router)
-	auth.RegisterRoutes(router)
-	oss.RegisterRoutes(router)
-	task.RegisterRoutes(router)
-	registerMountSQLRoutes(router)
+	carrierAPI := router.Group("/carrier")
+	carrierAPI.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "healthy",
+			"service":   "MountCore",
+			"timestamp": time.Now().Format(time.RFC3339),
+		})
+	})
+	log.Println("Health check route registered at /carrier/health")
+	workflowHandlers.RegisterRoutes(carrierAPI)
+	ability.RegisterRoutes(carrierAPI)
+	scheduler.RegisterRoutes(carrierAPI)
+	skill.RegisterRoutes(carrierAPI)
+	role.RegisterRoutes(carrierAPI)
+	sop.RegisterRoutes(carrierAPI)
+	auth.RegisterRoutes(carrierAPI)
+	oss.RegisterRoutes(carrierAPI)
+	task.RegisterRoutes(carrierAPI)
+	registerMountSQLRoutes(carrierAPI)
 
 	if projectHandler != nil {
 		projectAPI := router.Group("/project")
@@ -193,7 +202,7 @@ func main() {
 	select {}
 }
 
-func registerMountSQLRoutes(router *gin.Engine) {
+func registerMountSQLRoutes(router gin.IRouter) {
 	mountSQL := router.Group("/mount/sql")
 
 	mountSQL.GET("/list", func(c *gin.Context) {

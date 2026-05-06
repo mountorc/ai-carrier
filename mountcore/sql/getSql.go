@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/trae/autoFlow/common/embedding"
+	"github.com/xmzail/ai-carrier-dev/common/embedding"
 )
 
 type WhereSetConfig struct {

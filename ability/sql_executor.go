@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/trae/autoFlow/carriercore/mountcore/sql"
+	"github.com/xmzail/ai-carrier-dev/carriercore/mountcore/sql"
 )
 
 func executeAbilitySQLByUUID(c *gin.Context) {

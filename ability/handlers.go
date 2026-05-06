@@ -20,11 +20,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	mountsql "github.com/trae/autoFlow/carriercore/mountcore/sql"
-	"github.com/trae/autoFlow/carriercore/project"
-	"github.com/trae/autoFlow/common/capability"
-	"github.com/trae/autoFlow/common/embedding"
-	"github.com/trae/autoFlow/mounts/workflow/workers"
+	mountsql "github.com/xmzail/ai-carrier-dev/carriercore/mountcore/sql"
+	"github.com/xmzail/ai-carrier-dev/carriercore/project"
+	"github.com/xmzail/ai-carrier-dev/common/capability"
+	"github.com/xmzail/ai-carrier-dev/common/embedding"
+	"github.com/xmzail/ai-carrier-dev/mounts/workflow/workers"
 )
 
 var (
@@ -1893,6 +1893,7 @@ type AgentRegisterRequest struct {
 	AvatarImage   string `json:"avatar_image"`
 	CarrierUserID string `json:"carrier_user_id"`
 	IdentityToken string `json:"identity_token"`
+	UUIDRole      string `json:"uuid_role"`
 }
 
 func AgentRegisterHandler(c *gin.Context) {
@@ -1960,6 +1961,7 @@ func AgentRegisterHandler(c *gin.Context) {
 		req.AvatarImage,
 		req.CarrierUserID,
 		req.IdentityToken,
+		req.UUIDRole,
 	}
 
 	registerResult, err := mountsql.ExecuteSQLByUUID(context.Background(), "440e8400-e22b-41d4-a716-446655440004", args)

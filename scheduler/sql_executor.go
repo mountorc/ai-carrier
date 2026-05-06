@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/trae/autoFlow/carriercore/common/sql"
+	"github.com/xmzail/ai-carrier-dev/carriercore/common/sql"
 )
 
 type pgxRowsAdapter struct {

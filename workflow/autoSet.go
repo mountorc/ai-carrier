@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/trae/autoFlow/carriercore/common/db"
+	"github.com/xmzail/ai-carrier-dev/carriercore/common/db"
 )
 
 var (

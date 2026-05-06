@@ -14,7 +14,7 @@ type Response struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router gin.IRouter) {
 	ossGroup := router.Group("/oss")
 
 	ossGroup.POST("/upload", handleUpload)

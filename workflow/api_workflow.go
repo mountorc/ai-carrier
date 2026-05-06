@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	httpmount "github.com/trae/autoFlow/mounts/http"
-	api "github.com/trae/autoFlow/sdk/mountcore-sdk/go"
+	httpmount "github.com/xmzail/ai-carrier-dev/mounts/http"
+	api "github.com/xmzail/ai-carrier-dev/sdk/mountcore-sdk/go"
 )
 
 //go:embed api_workflow.json
@@ -39,7 +39,7 @@ func wrapHTTPHandler(handler http.HandlerFunc) gin.HandlerFunc {
 	}
 }
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router gin.IRouter) {
 	if err := api.RegisterRoutesFromJSONData(router, apiWorkflowData, "workflow/api_workflow.json", getHandlerMap()); err != nil {
 		log.Fatalf("Failed to register workflow routes: %v", err)
 	}

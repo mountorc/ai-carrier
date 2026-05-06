@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/trae/autoFlow/common/embedding"
-	"github.com/trae/autoFlow/common/seekdb"
-	"github.com/trae/autoFlow/carriercore/common/db"
+	"github.com/xmzail/ai-carrier-dev/common/embedding"
+	"github.com/xmzail/ai-carrier-dev/common/seekdb"
+	"github.com/xmzail/ai-carrier-dev/carriercore/common/db"
 )
 
 var PostgresStore *seekdb.PostgresStore

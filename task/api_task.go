@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
-	dbconfig "github.com/trae/autoFlow/carriercore/common/db"
+	dbconfig "github.com/xmzail/ai-carrier-dev/carriercore/common/db"
 )
 
 //go:embed api_task.json
@@ -161,7 +161,7 @@ func Close() {
 	}
 }
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router gin.IRouter) {
 	taskGroup := router.Group("/task")
 	{
 		taskGroup.GET("/list", ListTasksHandler)

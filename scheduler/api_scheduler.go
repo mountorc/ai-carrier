@@ -12,9 +12,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	api "github.com/trae/autoFlow/sdk/mountcore-sdk/go"
-	"github.com/trae/autoFlow/carriercore/common/db"
-	sqlutil "github.com/trae/autoFlow/carriercore/common/sql"
+	api "github.com/xmzail/ai-carrier-dev/sdk/mountcore-sdk/go"
+	"github.com/xmzail/ai-carrier-dev/carriercore/common/db"
+	sqlutil "github.com/xmzail/ai-carrier-dev/carriercore/common/sql"
 )
 
 //go:embed api_scheduler.json
@@ -159,7 +159,7 @@ func getHandlerMap() map[string]gin.HandlerFunc {
 	}
 }
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router gin.IRouter) {
 	if err := api.RegisterRoutesFromJSONData(router, apiSchedulerData, "scheduler/api_scheduler.json", getHandlerMap()); err != nil {
 		log.Fatalf("Failed to register scheduler routes: %v", err)
 	}

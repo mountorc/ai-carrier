@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/trae/autoFlow/carriercore/sdk/api"
+	"github.com/xmzail/ai-carrier-dev/carriercore/sdk/api"
 )
 
 func main() {

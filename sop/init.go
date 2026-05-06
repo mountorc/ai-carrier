@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 
-	"github.com/trae/autoFlow/carriercore/common/db"
-	csql "github.com/trae/autoFlow/carriercore/common/sql"
-	api "github.com/trae/autoFlow/sdk/mountcore-sdk/go"
+	"github.com/xmzail/ai-carrier-dev/carriercore/common/db"
+	csql "github.com/xmzail/ai-carrier-dev/carriercore/common/sql"
+	api "github.com/xmzail/ai-carrier-dev/sdk/mountcore-sdk/go"
 )
 
 type Config struct {
@@ -102,7 +102,7 @@ func getHandlerMap() map[string]gin.HandlerFunc {
 	}
 }
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router gin.IRouter) {
 	if err := api.RegisterRoutesFromJSONData(router, apiSOPData, "sop/api_sop.json", getHandlerMap()); err != nil {
 		log.Fatalf("Failed to register SOP routes: %v", err)
 	}

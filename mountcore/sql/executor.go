@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/trae/autoFlow/common/embedding"
+	"github.com/xmzail/ai-carrier-dev/common/embedding"
 	_ "github.com/lib/pq"
 )
 

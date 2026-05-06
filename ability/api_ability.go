@@ -17,12 +17,12 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 
-	"github.com/trae/autoFlow/carriercore/common/db"
-	sqlutil "github.com/trae/autoFlow/carriercore/common/sql"
-	"github.com/trae/autoFlow/carriercore/project"
-	"github.com/trae/autoFlow/common/capability"
-	"github.com/trae/autoFlow/mounts/workflow/workers"
-	api "github.com/trae/autoFlow/sdk/mountcore-sdk/go"
+	"github.com/xmzail/ai-carrier-dev/carriercore/common/db"
+	sqlutil "github.com/xmzail/ai-carrier-dev/carriercore/common/sql"
+	"github.com/xmzail/ai-carrier-dev/carriercore/project"
+	"github.com/xmzail/ai-carrier-dev/common/capability"
+	"github.com/xmzail/ai-carrier-dev/mounts/workflow/workers"
+	api "github.com/xmzail/ai-carrier-dev/sdk/mountcore-sdk/go"
 )
 
 //go:embed sql_ability.json
@@ -215,7 +215,7 @@ func getHandlerMap() map[string]gin.HandlerFunc {
 	}
 }
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router gin.IRouter) {
 	if err := api.RegisterRoutesFromJSONData(router, apiAbilityData, "ability/api_ability.json", getHandlerMap()); err != nil {
 		log.Fatalf("Failed to register ability routes: %v", err)
 	}

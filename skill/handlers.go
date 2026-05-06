@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/trae/autoFlow/carriercore/oss"
+	"github.com/xmzail/ai-carrier-dev/carriercore/oss"
 )
 
 type SkillListRequest struct {

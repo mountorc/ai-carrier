@@ -15,9 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/trae/autoFlow/common/httpclient"
-	"github.com/trae/autoFlow/common/plugin"
-	"github.com/trae/autoFlow/mounts/workflow"
+	"github.com/xmzail/ai-carrier-dev/common/httpclient"
+	"github.com/xmzail/ai-carrier-dev/common/plugin"
+	"github.com/xmzail/ai-carrier-dev/mounts/workflow"
 )
 
 // 辅助函数：获取项目根目录下的正确文件路径

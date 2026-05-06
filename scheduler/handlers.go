@@ -13,10 +13,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"github.com/trae/autoFlow/carriercore/common/db"
-	sqlutil "github.com/trae/autoFlow/carriercore/common/sql"
-	"github.com/trae/autoFlow/mounts/workflow"
-	"github.com/trae/autoFlow/mounts/workflow/types"
+	"github.com/xmzail/ai-carrier-dev/carriercore/common/db"
+	sqlutil "github.com/xmzail/ai-carrier-dev/carriercore/common/sql"
+	"github.com/xmzail/ai-carrier-dev/mounts/workflow"
+	"github.com/xmzail/ai-carrier-dev/mounts/workflow/types"
 )
 
 // 列表实例

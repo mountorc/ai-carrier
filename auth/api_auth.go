@@ -20,7 +20,7 @@ func Close() {
 	// Cleanup if needed
 }
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router gin.IRouter) {
 	auth := router.Group("/auth")
 
 	auth.POST("/register", registerHandler)

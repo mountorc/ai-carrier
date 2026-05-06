@@ -1,22 +1,22 @@
 {
   "queries": {
     "list": {
-      "sql": "SELECT id, uuid, name, agent_naming, slogan, description, skills, status, icon, tags, created_at, updated_at FROM role_store WHERE status != 'deleted' ORDER BY created_at DESC"
+      "sql": "SELECT id, uuid, name, agent_naming, slogan, description, skills, status, icon, tags, created_at, updated_at FROM agent_role WHERE status != 'deleted' ORDER BY created_at DESC"
     },
     "get": {
-      "sql": "SELECT id, uuid, name, agent_naming, slogan, description, skills, status, icon, tags, created_at, updated_at FROM role_store WHERE uuid = $1 AND status != 'deleted'"
+      "sql": "SELECT id, uuid, name, agent_naming, slogan, description, skills, status, icon, tags, created_at, updated_at FROM agent_role WHERE uuid = $1 AND status != 'deleted'"
     },
     "getByName": {
-      "sql": "SELECT id, uuid, name, agent_naming, slogan, description, skills, status, icon, tags, created_at, updated_at FROM role_store WHERE name = $1 AND status != 'deleted'"
+      "sql": "SELECT id, uuid, name, agent_naming, slogan, description, skills, status, icon, tags, created_at, updated_at FROM agent_role WHERE name = $1 AND status != 'deleted'"
     },
     "create": {
-      "sql": "INSERT INTO role_store (id, uuid, name, agent_naming, slogan, description, skills, status, icon, tags, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
+      "sql": "INSERT INTO agent_role (id, uuid, name, agent_naming, slogan, description, skills, status, icon, tags, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
     },
     "update": {
-      "sql": "UPDATE role_store SET name = $2, agent_naming = $3, slogan = $4, description = $5, skills = $6, status = $7, icon = $8, tags = $9, updated_at = $10 WHERE uuid = $1 AND status != 'deleted'"
+      "sql": "UPDATE agent_role SET name = $2, agent_naming = $3, slogan = $4, description = $5, skills = $6, status = $7, icon = $8, tags = $9, updated_at = $10 WHERE uuid = $1 AND status != 'deleted'"
     },
     "delete": {
-      "sql": "UPDATE role_store SET status = 'deleted', updated_at = $2 WHERE uuid = $1"
+      "sql": "UPDATE agent_role SET status = 'deleted', updated_at = $2 WHERE uuid = $1"
     }
   }
 }

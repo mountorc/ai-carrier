@@ -12,9 +12,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/trae/autoFlow/carriercore/workflow"
-	"github.com/trae/autoFlow/common/capability"
-	"github.com/trae/autoFlow/mounts/workflow/workers"
+	"github.com/xmzail/ai-carrier-dev/carriercore/workflow"
+	"github.com/xmzail/ai-carrier-dev/common/capability"
+	"github.com/xmzail/ai-carrier-dev/mounts/workflow/workers"
 )
 
 // ProxyAbilityRegisterRequest 定义添加代理能力的请求结构

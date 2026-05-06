@@ -119,7 +119,7 @@ func Close() {
 	}
 }
 
-func RegisterRoutes(router *gin.Engine) {
+func RegisterRoutes(router gin.IRouter) {
 	roleGroup := router.Group("/role")
 	{
 		roleGroup.GET("/list", GetRoleListHandler)

@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/trae/autoFlow/carriercore/mountcore/sql"
+	"github.com/xmzail/ai-carrier-dev/carriercore/mountcore/sql"
 )
 
 func ExecuteSkillSQL(uuid string, args ...interface{}) (*sql.QueryResult, error) {
