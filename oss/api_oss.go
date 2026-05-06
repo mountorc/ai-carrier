@@ -371,7 +371,7 @@ func handleReloadTokens(c *gin.Context) {
 		return
 	}
 
-	err := client.ReloadTokens("../data/oss_token.json")
+	err := client.ReloadTokens("./data/oss_token.json")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
 			Success: false,

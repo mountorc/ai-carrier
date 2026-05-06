@@ -14,13 +14,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/xmzail/ai-carrier-dev/carriercore/ability"
-	"github.com/xmzail/ai-carrier-dev/carriercore/apiregistry"
 	"github.com/xmzail/ai-carrier-dev/carriercore/auth"
 	"github.com/xmzail/ai-carrier-dev/carriercore/mountcore/sql"
 	"github.com/xmzail/ai-carrier-dev/carriercore/oss"
 	"github.com/xmzail/ai-carrier-dev/carriercore/project"
 	"github.com/xmzail/ai-carrier-dev/carriercore/role"
 	"github.com/xmzail/ai-carrier-dev/carriercore/scheduler"
+	"github.com/xmzail/ai-carrier-dev/carriercore/sdk/api"
 	"github.com/xmzail/ai-carrier-dev/carriercore/skill"
 	"github.com/xmzail/ai-carrier-dev/carriercore/sop"
 	"github.com/xmzail/ai-carrier-dev/carriercore/task"
@@ -97,7 +97,7 @@ func main() {
 	}
 
 	log.Println("Initializing OSS module...")
-	if err := oss.Init("../data/oss_token.json"); err != nil {
+	if err := oss.Init("./data/oss_token.json"); err != nil {
 		log.Printf("Warning: failed to initialize OSS: %v", err)
 	} else {
 		log.Println("OSS module initialized successfully")
@@ -135,7 +135,7 @@ func main() {
 	}
 
 	router := gin.Default()
-	apiregistry.SetupCORS(router)
+	api.SetupCORS(router)
 
 	log.Println("Registering routes...")
 	carrierAPI := router.Group("/carrier")
