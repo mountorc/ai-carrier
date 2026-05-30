@@ -1,8 +1,0 @@
-README.md
-setup.py
-autodatasource/__init__.py
-autodatasource_sdk_python.egg-info/PKG-INFO
-autodatasource_sdk_python.egg-info/SOURCES.txt
-autodatasource_sdk_python.egg-info/dependency_links.txt
-autodatasource_sdk_python.egg-info/requires.txt
-autodatasource_sdk_python.egg-info/top_level.txt
